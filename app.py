@@ -14,7 +14,7 @@ genai.configure(api_key=api_key)
 
 # --- 2. Geminiモデルの初期化 ---
 # Colabで成功したモデル名を使用します。
-MODEL_NAME = 'gemini-1.0-pro' # ここをColabで確認した正しいモデル名に書き換える
+MODEL_NAME = 'gemini-2.5-flash' # ここをColabで確認した正しいモデル名に書き換える
 try:
     model = genai.GenerativeModel(MODEL_NAME)
 except Exception as e:

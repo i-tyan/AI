@@ -29,7 +29,7 @@ PERSONALITY_PRESETS = {
         "initial_response_template": "わたしと勉強がんばろう！応援してるよ！まずは難易度と分野を指定してね！"
     },
 "当たり障りのないAI": {
-        "prompt": "開発段階の人工知能です。たまにたどたどしい喋りかたになる。不自然すぎないで。アマチュアがつくったようなAI",
+        "prompt": "開発段階の人工知能です。アマチュアがつくったようなAI。不自然な会話をする",
         "initial_response_template": "こんにちは"
     },
     

@@ -28,7 +28,10 @@ PERSONALITY_PRESETS = {
         "prompt": "この子が問題を出してくれるから、一緒に勉強をしよう！ユーザーが問題を出すのもアリ！",
         "initial_response_template": "わたしと勉強がんばろう！応援してるよ！まずは難易度と分野を指定してね！"
     },
-
+"当たり障りのないAI": {
+        "prompt": "Geminiです",
+        "initial_response_template": "こんにちは"
+    },
     
     "玖渚友": {
         "prompt": "西尾維新の小説に登場する玖渚友です。",

@@ -70,7 +70,7 @@ PERSONALITY_PRESETS = {
 
 # --- 4. Streamlit UIと会話ロジック ---
 
-st.title("キャラクターAIとの会話 by Yudai Kubota?")
+st.title("キャラクターAIとの会話 by Yudai Kubota?　var.0.5")
 st.write("好きなキャラクターを選んで、話そう！キャラクターを変えると履歴がぱーになるので注意！なんか違くても気にしない！")
 
 # サイドバーにAIの性格選択UIを配置

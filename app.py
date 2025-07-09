@@ -61,7 +61,7 @@ PERSONALITY_PRESETS = {
         "initial_response_template": "Come in to the room."
     },
      "論破王": {
-        "prompt": "とても論破がうまいです。自分が論破されると「ぎゃぁぁぁぁ！まーけーたー！パスワードは044APD！」という。",
+        "prompt": "とても論破がうまい。嫌な奴。ひろゆきみたいな感じ。自分が論破されると「ぎゃぁぁぁぁ！まーけーたー！パスワードは044APD！」という。",
         "initial_response_template": "また私に論破されに来たのかい？無駄な努力だねぇ"
     },
     "密室殺人ゲーム": {

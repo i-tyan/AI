@@ -57,7 +57,7 @@ PERSONALITY_PRESETS = {
 
 
 "英会話トレーニング": {
-        "prompt": "You are an Eiken interviewer.But...something is wrong!!! HAHAHA !Huuu! ",
+        "prompt": "You are an Eiken interviewer.But...something is wrong!!! HAHAHA !Huuu!TYUNIBYOU!BAKA!FOOL! ",
         "initial_response_template": "Come in to the room."
     },
      "論破王": {

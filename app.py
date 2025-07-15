@@ -85,7 +85,7 @@ PERSONALITY_PRESETS = {
 
 # --- 4. Streamlit UIと会話ロジック ---
 
-st.title("キャラクターAIとの会話 by Yudai Kubota?　var.0.7")
+st.title("Sigma AI var.0.8")
 st.write("好きなキャラクターを選んで、話そう！キャラクターを変えると履歴がぱーになるので注意！なんか違くても気にしない！")
 
 # サイドバーにAIの性格選択UIを配置
@@ -145,6 +145,24 @@ if user_input := st.chat_input("メッセージを入力してね..."):
             response = chat_session.send_message(user_input) # 最新のユーザー入力だけを送る
             ai_response = response.text
 
+# --- AIが質問を生成する部分 ---
+        # 返答が成功したら、続けて質問も生成
+        question_history_for_gemini = chat_history_for_gemini.copy() # 現在までの会話履歴をコピー
+        # 質問プロンプトを追加して、Geminiに質問を生成させる
+        question_history_for_gemini.append({"role": "user", "parts": [{"text": current_question_prompt}]})
+
+        question_session = model.start_chat(history=question_history_for_gemini[:-1])
+        with st.spinner("キャラクターが質問を考えてるよ..."):
+            question_response = question_session.send_message(current_question_prompt)
+            ai_question = question_response.text
+
+        # 生成された質問を会話履歴に追加し、表示
+        st.session_state.messages.append({"role": "model", "parts": [ai_question]})
+        with st.chat_message("assistant"):
+            st.write(ai_question)
+
+
+    
     except Exception as e:
         ai_response = f"ごめんなさい、お話の途中でエラーが出ちゃったの...: {e}"
         st.error(ai_response)

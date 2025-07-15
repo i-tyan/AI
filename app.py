@@ -98,7 +98,7 @@ st.write("好きなキャラクターを選んで、話そう！キャラクタ�
 # サイドバーにAIの性格選択UIを配置
 st.sidebar.header("AIを選ぶ")
 selected_preset_name = st.sidebar.radio(
-    "好きなAIを選んでね:",
+    "好きなAIを選んでね",
     list(PERSONALITY_PRESETS.keys())
 )
 

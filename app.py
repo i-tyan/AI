@@ -92,7 +92,7 @@ PERSONALITY_PRESETS = {
 
 # --- 4. Streamlit UIと会話ロジック ---
 
-st.title("Sigma AI　var.0.7")
+st.image("file:///C:/Users/%E4%B9%85%E4%BF%9D%E7%94%B0%E3%80%80%E6%98%8E%E6%97%A5%E9%A6%99/Downloads/Gemini_Generated_Image_qotgqqotgqqotgqq.png")
 st.write("好きなキャラクターを選んで、話そう！キャラクターを変えると履歴がぱーになるので注意！なんか違くても気にしない！会話を保存するときは、AIに会話を終了或いは保存する旨を伝えよう！")
 
 # サイドバーにAIの性格選択UIを配置

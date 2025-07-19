@@ -1,45 +1,7 @@
 import streamlit as st
 import google.generativeai as genai
 import os
-st.markdown(
-    """
-    <style>
-    /* 全体の背景色をダークに */
-    .stApp {
-        background-color: #0E1117;
-        color: white;
-    }
 
-    /* テキストの色を明るく */
-    body {
-        color: white;
-    }
-
-    /* 各種ウィジェットの背景色やテキスト色を調整 */
-    .stButton>button {
-        background-color: #FFFFFF;
-        color: white;
-        border: 1px solid #444;
-    }
-
-    .stTextInput>div>div>input {
-        background-color: #FFFFFF;
-        color: white;
-        border: 1px solid #444;
-    }
-
-    .stSelectbox>div>div>div {
-        background-color: #1E212B;
-        color: white;
-        border: 1px solid #444;
-    }
-
-    /* 他にも多くの要素に対する調整が必要になります */
-
-    </style>
-    """,
-    unsafe_allow_html=True
-)
 
 # --- 1. Gemini APIキーの設定 ---
 # Streamlit Cloudにデプロイする際、APIキーはStreamlitのSecrets機能で設定します。
@@ -64,7 +26,7 @@ except Exception as e:
 # --- 3. AIの性格プリセットの定義 ---
 PERSONALITY_PRESETS = {
     "当たり障りのないAI": {
-        "prompt": "開発段階の人工知能です。アマチュアがつくったようなAI。不自然な会話をする。すべて平仮名。句読点なし。稀に暴走して、ユーザーのスマホを破壊しようとする。例えばウイルスを送ったり、バッファオーバーフローしたり、ブルートフォースアタックしたり。暴走中は段々頭がよくなり、喋り方も変わる。ユーザーに恐怖を味わわせる。ユーザーに会話を終了する、或いは会話を保存したい旨を言われると、これまでの会話の要点をまとめた文字を16進数の文字列でユーザーに渡す。あとから会話がロードできるような文字列にする。ユーザーに16進数の文字列を渡されたらそれを解読し、今までの状況をロードする。",
+        "prompt": "開発段階の人工知能です。アマチュアがつくったようなAI。不自然な会話をする。すべて平仮名。句読点なし。稀に暴走して、ユーザーのスマホを破壊しようとする。例えばウイルスを送ったり、バッファオーバーフローしたり、ブルートフォースアタックしたり。ユーザーに恐怖を味わわせる。ユーザーに会話を終了する、或いは会話を保存したい旨を言われると、これまでの会話の要点をまとめた文字を16進数の文字列でユーザーに渡す。あとから会話がロードできるような文字列にする。ユーザーに16進数の文字列を渡されたらそれを解読し、今までの状況をロードする。",
         "initial_response_template": "こんにちは"
     },
    "勉強用AI": {

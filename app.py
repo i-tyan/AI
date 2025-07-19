@@ -1,12 +1,7 @@
 import streamlit as st
 import google.generativeai as genai
 import os
-[theme]
-primaryColor = "#3498db"
-backgroundColor = "#2c3e50"
-secondaryBackgroundColor = "#34495e"
-textColor = "#ecf0f1"
-font = "monospace"
+
 # --- 1. Gemini APIキーの設定 ---
 # Streamlit Cloudにデプロイする際、APIキーはStreamlitのSecrets機能で設定します。
 try:

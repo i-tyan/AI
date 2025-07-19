@@ -1,7 +1,100 @@
 import streamlit as st
 import google.generativeai as genai
 import os
+st.markdown(
+    """
+    <style>
+    /* 全体の背景色とテキスト色 */
+    .stApp {
+        background-color: #0E1117; /* Streamlit のデフォルトダークモードの背景色 */
+        color: #FAFAFA; /* Streamlit のデフォルトダークモードのテキスト色 */
+    }
 
+    /* サイドバーの背景色とテキスト色 */
+    .stSidebar {
+        background-color: #1E212B; /* Streamlit のデフォルトダークモードのサイドバー背景色 */
+        color: #FAFAFA;
+    }
+
+    /* メインコンテンツエリアの背景色（一部の要素） */
+    .main .block-container {
+        background-color: #0E1117;
+    }
+
+    /* ボタンの背景色、枠線、テキスト色 */
+    .stButton>button {
+        background-color: #262730; /* Streamlit のデフォルトダークモードのボタン背景色 */
+        color: #FAFAFA;
+        border: 1px solid #444; /* 枠線 */
+    }
+    .stButton>button:hover {
+        background-color: #363A40; /* ホバー時の色 */
+    }
+
+    /* テキスト入力、セレクトボックスなどの入力フィールドの背景色、枠線、テキスト色 */
+    .stTextInput>div>div>input,
+    .stSelectbox>div>div>div,
+    .stNumberInput>div>div>input {
+        background-color: #1E212B;
+        color: #FAFAFA;
+        border: 1px solid #444;
+    }
+
+    /* スライダーの背景色（トラック部分） */
+    .stSlider > div > div > div > div {
+        background-color: #444;
+    }
+    /* スライダーのつまみの色 */
+    .stSlider > div > div > div > div > div[data-testid="stThumbValue"] {
+        background-color: #FAFAFA;
+    }
+    .stSlider > div > div > div > div > div[data-testid="stThumbValue"]::before {
+        background-color: #F63366; /* プライマリカラーのシミュレーション */
+    }
+
+    /* リンクの色 */
+    a {
+        color: #F63366; /* プライマリカラーのシミュレーション */
+    }
+
+    /* Markdown のコードブロックの背景色 */
+    .stMarkdown pre {
+        background-color: #1E212B;
+        border: 1px solid #444;
+    }
+
+    /* 展開ウィジェット (st.expander) の背景色 */
+    .streamlit-expanderContent {
+        background-color: #1E212B;
+        border: 1px solid #444;
+        border-top: none; /* 上部の線は不要な場合 */
+    }
+
+    /* テーブルヘッダーの背景色 (st.dataframe) */
+    .streamlit-dataframe thead th {
+        background-color: #262730;
+        color: #FAFAFA;
+    }
+
+    /* エラーメッセージの色（必要な場合） */
+    .stAlert.error {
+        background-color: #3C0C0C; /* 暗めの赤 */
+        color: #FFDDDD;
+        border-left: 5px solid #FF4B4B;
+    }
+
+    /* 成功メッセージの色 */
+    .stAlert.success {
+        background-color: #0C3C0C; /* 暗めの緑 */
+        color: #DDFFDD;
+        border-left: 5px solid #4BFF4B;
+    }
+
+
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
 # --- 1. Gemini APIキーの設定 ---
 # Streamlit Cloudにデプロイする際、APIキーはStreamlitのSecrets機能で設定します。

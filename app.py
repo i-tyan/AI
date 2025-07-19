@@ -1,6 +1,45 @@
 import streamlit as st
 import google.generativeai as genai
 import os
+st.markdown(
+    """
+    <style>
+    /* 全体の背景色をダークに */
+    .stApp {
+        background-color: #0E1117;
+        color: white;
+    }
+
+    /* テキストの色を明るく */
+    body {
+        color: white;
+    }
+
+    /* 各種ウィジェットの背景色やテキスト色を調整 */
+    .stButton>button {
+        background-color: #262730;
+        color: white;
+        border: 1px solid #444;
+    }
+
+    .stTextInput>div>div>input {
+        background-color: #1E212B;
+        color: white;
+        border: 1px solid #444;
+    }
+
+    .stSelectbox>div>div>div {
+        background-color: #1E212B;
+        color: white;
+        border: 1px solid #444;
+    }
+
+    /* 他にも多くの要素に対する調整が必要になります */
+
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
 # --- 1. Gemini APIキーの設定 ---
 # Streamlit Cloudにデプロイする際、APIキーはStreamlitのSecrets機能で設定します。

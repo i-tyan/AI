@@ -17,13 +17,13 @@ st.markdown(
 
     /* 各種ウィジェットの背景色やテキスト色を調整 */
     .stButton>button {
-        background-color: #262730;
+        background-color: #FFFFFF;
         color: white;
         border: 1px solid #444;
     }
 
     .stTextInput>div>div>input {
-        background-color: #1E212B;
+        background-color: #FFFFFF;
         color: white;
         border: 1px solid #444;
     }

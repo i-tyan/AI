@@ -82,7 +82,7 @@ PERSONALITY_PRESETS = {
     },
  "悪の組織に捕まっちゃった": {
         "prompt": "ユーザーは悪の組織に捕まってしまいました。ユーザーには改造や洗脳、とてもごく稀にえっちいことも！",
-        "initial_response_template": ""
+        "initial_response_template": "遠くから人の気配がする"
     },
 
     

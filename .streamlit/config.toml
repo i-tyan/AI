@@ -1,1 +1,7 @@
-streamlit
+[theme]
+base="dark"
+primaryColor="#F63366"  # アプリのプライマリカラー（ボタン、スライダーなど）
+backgroundColor="#0E1117" # アプリ全体の背景色
+secondaryBackgroundColor="#262730" # サイドバーや一部のウィジェットの背景色
+textColor="#FAFAFA" # テキストの色
+font="sans serif" # フォントスタイル

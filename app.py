@@ -162,21 +162,16 @@ if user_input := st.chat_input("メッセージを入力してね..."):
         st.write(ai_response)
 # app.py 内での背景変更のイメージ
 # image_url_for_background は画像生成APIから取得した背景画像のURL
-st.markdown(
-    f"""
-    <style>
-    body {{
-        background-image: url('{image_url_for_background}');
-        background-size: cover;
-        background-repeat: no-repeat;
-        background-attachment: fixed;
-        transition: background-image 1s ease-in-out; /* スムーズな切り替え */
-    }}
-    /* Streamlitのメインコンテンツエリアの背景を調整して、背景画像が見えるようにする */
-    .stApp {{
-        background-color: rgba(255, 255, 255, 0.7); /* 例: 半透明の白 */
-    }}
-    </style>
-    """,
-    unsafe_allow_html=True
-)
+from openai import OpenAI
+client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY")) # Streamlit Secretsで管理
+
+def generate_image_with_dalle(prompt):
+    response = client.images.generate(
+        model="dall-e-3",
+        prompt=prompt,
+        size="1024x1024", # 画像サイズ
+        quality="standard",
+        n=1,
+    )
+    image_url = response.data[0].url
+    return image_url

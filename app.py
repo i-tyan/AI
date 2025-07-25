@@ -127,75 +127,72 @@ for message in st.session_state.messages:
         with st.chat_message("assistant"):
             st.write(message["parts"][0])
 
+# ... (前略) ...
 
-# ユーザーからの入力を受け取る
-if user_input := st.chat_input("メッセージを入力してね..."):
-    # ユーザーのメッセージを履歴に追加して表示
-    st.session_state.messages.append({"role": "user", "parts": [user_input]})
-    with st.chat_message("user"):
-        st.write(user_input)
+    # ユーザーからの入力を受け取る
+    if user_input := st.chat_input("メッセージを入力してね..."):
+        st.session_state.messages.append({"role": "user", "parts": [user_input]})
+        with st.chat_message("user"):
+            st.write(user_input)
 
-    # Geminiにリクエストを送るための会話履歴を準備
-    # partsはリストのリストである必要があるため、調整
-    chat_history_for_gemini = []
-    for msg in st.session_state.messages:
-        # メッセージの "parts" が既にリスト形式であると仮定
-        chat_history_for_gemini.append({"role": msg["role"], "parts": [{"text": p} if isinstance(p, str) else p for p in msg["parts"]]})
+        chat_history_for_gemini = []
+        for msg in st.session_state.messages:
+            chat_history_for_gemini.append({"role": msg["role"], "parts": [{"text": p} if isinstance(p, str) else p for p in msg["parts"]]})
 
-    # Geminiモデルとチャットセッションを開始
-    # send_messageは最新のユーザー入力だけを送るので、historyにはそれ以前のメッセージを渡す
-    try:
-        chat_session = model.start_chat(history=chat_history_for_gemini[:-1]) # 最新のユーザー入力は除外
+        # --- ai_response を try ブロックの外で初期化する ---
+        ai_response = "" # エラー時に備えて空文字列で初期化
+        generated_image_url = None # 画像URLも初期化
 
-        # Geminiからの応答を取得
-        with st.spinner("キャラクターが考えてるよ..."):
-            response = chat_session.send_message(user_input) # 最新のユーザー入力だけを送る
-            ai_response = response.text
+        try:
+            # ユーザーメッセージへの返答
+            chat_session = model.start_chat(history=chat_history_for_gemini[:-1])
+            with st.spinner("キャラクターが考えてるよ..."):
+                response = chat_session.send_message(user_input)
+                ai_response = response.text # ここで ai_response が定義される
 
-    except Exception as e:
-        ai_response = f"ごめんなさい、お話の途中でエラーが出ちゃったの...: {e}"
-        st.error(ai_response)
+            # --- ここから画像生成と背景変更のロジックを追加 ---
+            # （以前の画像生成・背景変更のコードがここに入る）
+            # 例:
+            # background_prompt = f"これまでの会話（最新のメッセージを含む）：\n{st.session_state.messages}\n\nこの会話から連想される背景のキーワードを一つだけ簡潔に教えてください。背景に特に影響するキーワードがない場合は「なし」と答えてください。"
+            # background_response = model.generate_content(background_prompt)
+            # image_gen_prompt = background_response.text
+            #
+            # if image_gen_prompt and image_gen_prompt != "なし":
+            #     # DALL-E 3 API呼び出しなど、画像生成ロジック
+            #     # generated_image_url = generate_image_with_dalle(image_gen_prompt)
+            #     pass # ここに実際の画像生成コードが入ります
+            # else:
+            #     generated_image_url = None # 画像を生成しない場合
 
-    # AIの返答を履歴に追加して表示
-    st.session_state.messages.append({"role": "model", "parts": [ai_response]})
-    with st.chat_message("assistant"):
-        st.write(ai_response)
-# app.py 内での背景変更のイメージ
-# image_url_for_background は画像生成APIから取得した背景画像のURL
-from openai import OpenAI
-client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY")) # Streamlit Secretsで管理
+        except Exception as e:
+            # エラーが発生した場合、ai_response にエラーメッセージを代入する
+            ai_response = f"ごめんなさい、お話の途中でエラーが出ちゃったの...: {e}"
+            st.error(ai_response) # エラーメッセージも表示
+            generated_image_url = None # エラー時は画像なし
 
-def generate_image_with_dalle(prompt):
-    response = client.images.generate(
-        model="dall-e-3",
-        prompt=prompt,
-        size="1024x1024", # 画像サイズ
-        quality="standard",
-        n=1,
-    )
-    image_url = response.data[0].url
-    return image_url
-# AIの返答と共に画像を表示
-with st.chat_message("assistant"):
-    st.write(ai_response) # AIのテキスト返答
-    if generated_image_url: # 画像が生成された場合
-        st.image(generated_image_url, caption="AIが生成したイメージだよ！")
-        # 背景画像を変更するCSSを動的に適用
-st.markdown(
-    f"""
-    <style>
-    body {{
-        background-image: url('{generated_image_url}');
-        background-size: cover;
-        background-repeat: no-repeat;
-        background-attachment: fixed;
-        transition: background-image 1s ease-in-out; /* スムーズな切り替え */
-    }}
-    /* Streamlitのメインコンテンツの背景が透明でない場合、調整が必要 */
-    .stApp {{
-        background-color: rgba(255, 255, 255, 0.7); /* コンテンツ部分の透過度を調整 */
-    }}
-    </style>
-    """,
-    unsafe_allow_html=True
-)
+        # --- AIの返答を履歴に追加して表示（ai_response は必ず定義されている） ---
+        st.session_state.messages.append({"role": "model", "parts": [ai_response]})
+        with st.chat_message("assistant"):
+            st.write(ai_response) # AIのテキスト返答
+
+            if generated_image_url: # 画像が生成された場合のみ表示
+                st.image(generated_image_url, caption="AIが生成したイメージだよ！")
+                # ここで背景変更のCSSも適用
+                st.markdown(
+                    f"""
+                    <style>
+                    body {{
+                        background-image: url('{generated_image_url}');
+                        background-size: cover;
+                        background-repeat: no-repeat;
+                        background-attachment: fixed;
+                        transition: background-image 1s ease-in-out;
+                    }}
+                    .stApp {{
+                        background-color: rgba(255, 255, 255, 0.7);
+                    }}
+                    </style>
+                    """,
+                    unsafe_allow_html=True
+                )
+# ... (後略) ...

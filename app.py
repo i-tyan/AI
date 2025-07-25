@@ -127,21 +127,19 @@ for message in st.session_state.messages:
         with st.chat_message("assistant"):
             st.write(message["parts"][0])
 
-# ... (前略) ...
+def handle_user_input():
+    user_input = st.session_state.user_chat_input_key # chat_input の値をセッションステートから取得
 
-    # ユーザーからの入力を受け取る
-    if user_input := st.chat_input("メッセージを入力してね..."):
+    if user_input: # ユーザーが何か入力した場合
         st.session_state.messages.append({"role": "user", "parts": [user_input]})
-        with st.chat_message("user"):
-            st.write(user_input)
 
         chat_history_for_gemini = []
         for msg in st.session_state.messages:
             chat_history_for_gemini.append({"role": msg["role"], "parts": [{"text": p} if isinstance(p, str) else p for p in msg["parts"]]})
 
-        # --- ai_response を try ブロックの外で初期化する ---
-        ai_response = "" # エラー時に備えて空文字列で初期化
-        generated_image_url = None # 画像URLも初期化
+        # ai_response を try ブロックの外で初期化
+        ai_response = ""
+        generated_image_url = None
 
         try:
             # ユーザーメッセージへの返答

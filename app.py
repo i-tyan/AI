@@ -194,4 +194,4 @@ def handle_user_input():
                     unsafe_allow_html=True
                 )
 # ... (後略) ...
-st.chat_input("メッセージを入力してね...", on_submit=handle_user_input, key="user_chat_input_key")
+st.chat_input("メッセージを入力してね...", key="user_chat_input_key")

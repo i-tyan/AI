@@ -175,3 +175,27 @@ def generate_image_with_dalle(prompt):
     )
     image_url = response.data[0].url
     return image_url
+# AIの返答と共に画像を表示
+with st.chat_message("assistant"):
+    st.write(ai_response) # AIのテキスト返答
+    if generated_image_url: # 画像が生成された場合
+        st.image(generated_image_url, caption="AIが生成したイメージだよ！")
+        # 背景画像を変更するCSSを動的に適用
+st.markdown(
+    f"""
+    <style>
+    body {{
+        background-image: url('{generated_image_url}');
+        background-size: cover;
+        background-repeat: no-repeat;
+        background-attachment: fixed;
+        transition: background-image 1s ease-in-out; /* スムーズな切り替え */
+    }}
+    /* Streamlitのメインコンテンツの背景が透明でない場合、調整が必要 */
+    .stApp {{
+        background-color: rgba(255, 255, 255, 0.7); /* コンテンツ部分の透過度を調整 */
+    }}
+    </style>
+    """,
+    unsafe_allow_html=True
+)

@@ -147,20 +147,23 @@ def handle_user_input():
             with st.spinner("キャラクターが考えてるよ..."):
                 response = chat_session.send_message(user_input)
                 ai_response = response.text # ここで ai_response が定義される
+print(f"Gemini's image decision: {image_gen_prompt_for_dalle}") 
 
-            # --- ここから画像生成と背景変更のロジックを追加 ---
-            # （以前の画像生成・背景変更のコードがここに入る）
-            # 例:
-            # background_prompt = f"これまでの会話（最新のメッセージを含む）：\n{st.session_state.messages}\n\nこの会話から連想される背景のキーワードを一つだけ簡潔に教えてください。背景に特に影響するキーワードがない場合は「なし」と答えてください。"
-            # background_response = model.generate_content(background_prompt)
-            # image_gen_prompt = background_response.text
-            #
-            # if image_gen_prompt and image_gen_prompt != "なし":
-            #     # DALL-E 3 API呼び出しなど、画像生成ロジック
-            #     # generated_image_url = generate_image_with_dalle(image_gen_prompt)
-            #     pass # ここに実際の画像生成コードが入ります
-            # else:
-            #     generated_image_url = None # 画像を生成しない場合
+    generated_image_url = None
+    if image_gen_prompt_for_dalle and image_gen_prompt_for_dalle != "NO_IMAGE":
+        # ここにDALL-Eなどの実際の呼び出しコードと、URL取得を入れる
+        # 例: generated_image_url = generate_image_with_dalle(image_gen_prompt_for_dalle)
+
+        # TODO: ここに generate_image_with_dalle(image_gen_prompt_for_dalle) の呼び出しと、
+        #       生成されたURLを generated_image_url に代入する実際のコードを記述する。
+        #       APIキーの設定も忘れずに！
+
+        # ★DALL-Eの呼び出しが成功したら、生成されたURLもログに出力★
+        # print(f"Generated image URL: {generated_image_url}")
+
+    else:
+        print("Gemini decided not to generate an image (or returned NO_IMAGE).")
+        generated_image_url = None
 
         except Exception as e:
             # エラーが発生した場合、ai_response にエラーメッセージを代入する
@@ -194,4 +197,4 @@ def handle_user_input():
                     unsafe_allow_html=True
                 )
 # ... (後略) ...
-st.chat_input("メッセージを入力してね...", key="user_chat_input_key")
+st.chat_input("メッセージを入力してね...",on_submit=handle_user_input, key="user_chat_input_key")

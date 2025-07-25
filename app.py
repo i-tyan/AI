@@ -127,74 +127,36 @@ for message in st.session_state.messages:
         with st.chat_message("assistant"):
             st.write(message["parts"][0])
 
-def handle_user_input():
-    user_input = st.session_state.user_chat_input_key # chat_input の値をセッションステートから取得
 
-    if user_input: # ユーザーが何か入力した場合
-        st.session_state.messages.append({"role": "user", "parts": [user_input]})
+# ユーザーからの入力を受け取る
+if user_input := st.chat_input("メッセージを入力してね..."):
+    # ユーザーのメッセージを履歴に追加して表示
+    st.session_state.messages.append({"role": "user", "parts": [user_input]})
+    with st.chat_message("user"):
+        st.write(user_input)
 
-        chat_history_for_gemini = []
-        for msg in st.session_state.messages:
-            chat_history_for_gemini.append({"role": msg["role"], "parts": [{"text": p} if isinstance(p, str) else p for p in msg["parts"]]})
+    # Geminiにリクエストを送るための会話履歴を準備
+    # partsはリストのリストである必要があるため、調整
+    chat_history_for_gemini = []
+    for msg in st.session_state.messages:
+        # メッセージの "parts" が既にリスト形式であると仮定
+        chat_history_for_gemini.append({"role": msg["role"], "parts": [{"text": p} if isinstance(p, str) else p for p in msg["parts"]]})
 
-        # ai_response を try ブロックの外で初期化
-        ai_response = ""
-        generated_image_url = None
+    # Geminiモデルとチャットセッションを開始
+    # send_messageは最新のユーザー入力だけを送るので、historyにはそれ以前のメッセージを渡す
+    try:
+        chat_session = model.start_chat(history=chat_history_for_gemini[:-1]) # 最新のユーザー入力は除外
 
-        try:
-            # ユーザーメッセージへの返答
-            chat_session = model.start_chat(history=chat_history_for_gemini[:-1])
-            with st.spinner("キャラクターが考えてるよ..."):
-                response = chat_session.send_message(user_input)
-                ai_response = response.text # ここで ai_response が定義される
-print(f"Gemini's image decision: {image_gen_prompt_for_dalle}") 
+        # Geminiからの応答を取得
+        with st.spinner("キャラクターが考えてるよ..."):
+            response = chat_session.send_message(user_input) # 最新のユーザー入力だけを送る
+            ai_response = response.text
 
-    generated_image_url = None
-    if image_gen_prompt_for_dalle and image_gen_prompt_for_dalle != "NO_IMAGE":
-        # ここにDALL-Eなどの実際の呼び出しコードと、URL取得を入れる
-        # 例: generated_image_url = generate_image_with_dalle(image_gen_prompt_for_dalle)
+    except Exception as e:
+        ai_response = f"ごめんなさい、お話の途中でエラーが出ちゃったの...: {e}"
+        st.error(ai_response)
 
-        # TODO: ここに generate_image_with_dalle(image_gen_prompt_for_dalle) の呼び出しと、
-        #       生成されたURLを generated_image_url に代入する実際のコードを記述する。
-        #       APIキーの設定も忘れずに！
-
-        # ★DALL-Eの呼び出しが成功したら、生成されたURLもログに出力★
-        # print(f"Generated image URL: {generated_image_url}")
-
-    else:
-        print("Gemini decided not to generate an image (or returned NO_IMAGE).")
-        generated_image_url = None
-
-        except Exception as e:
-            # エラーが発生した場合、ai_response にエラーメッセージを代入する
-            ai_response = f"ごめんなさい、お話の途中でエラーが出ちゃったの...: {e}"
-            st.error(ai_response) # エラーメッセージも表示
-            generated_image_url = None # エラー時は画像なし
-
-        # --- AIの返答を履歴に追加して表示（ai_response は必ず定義されている） ---
-        st.session_state.messages.append({"role": "model", "parts": [ai_response]})
-        with st.chat_message("assistant"):
-            st.write(ai_response) # AIのテキスト返答
-
-            if generated_image_url: # 画像が生成された場合のみ表示
-                st.image(generated_image_url, caption="AIが生成したイメージだよ！")
-                # ここで背景変更のCSSも適用
-                st.markdown(
-                    f"""
-                    <style>
-                    body {{
-                        background-image: url('{generated_image_url}');
-                        background-size: cover;
-                        background-repeat: no-repeat;
-                        background-attachment: fixed;
-                        transition: background-image 1s ease-in-out;
-                    }}
-                    .stApp {{
-                        background-color: rgba(255, 255, 255, 0.7);
-                    }}
-                    </style>
-                    """,
-                    unsafe_allow_html=True
-                )
-# ... (後略) ...
-st.chat_input("メッセージを入力してね...",on_submit=handle_user_input, key="user_chat_input_key")
+    # AIの返答を履歴に追加して表示
+    st.session_state.messages.append({"role": "model", "parts": [ai_response]})
+    with st.chat_message("assistant"):
+        st.write(ai_response)

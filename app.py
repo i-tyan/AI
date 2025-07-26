@@ -230,3 +230,6 @@ if "last_generated_image_url" in st.session_state and st.session_state.last_gene
         """,
         unsafe_allow_html=True
     )
+except Exception as e: # この except ブロックを追加する
+    st.error(f"背景の表示中にエラーが発生しました: {e}")
+    print(f"Background display error: {e}")

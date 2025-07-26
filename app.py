@@ -1,7 +1,7 @@
 import streamlit as st
 import google.generativeai as genai
 import os
-
+from openai import OpenAI # OpenAIライブラリのインポートを確認
 # --- 1. Gemini APIキーの設定 ---
 # Streamlit Cloudにデプロイする際、APIキーはStreamlitのSecrets機能で設定します。
 try:
@@ -21,6 +21,29 @@ except Exception as e:
     st.error(f"Geminiモデルの初期化に失敗しました: {e}")
     st.stop()
 
+try:
+    openai_api_key = st.secrets["OPENAI_API_KEY"]
+except KeyError:
+    st.error("OpenAI API Keyが設定されていません。Streamlit CloudのSecretsに設定してください。")
+    st.stop()
+
+openai_client = OpenAI(api_key=openai_api_key)
+
+# DALL-E画像生成関数（追加）
+def generate_image_with_dalle(prompt_text):
+    try:
+        response = openai_client.images.generate(
+            model="dall-e-3",
+            prompt=prompt_text,
+            size="1024x1024",
+            quality="standard",
+            n=1,
+        )
+        image_url = response.data[0].url
+        return image_url
+    except Exception as e:
+        st.error(f"DALL-E画像生成中にエラーが発生しました: {e}")
+        return None
 
 # --- 3. AIの性格プリセットの定義 ---
 PERSONALITY_PRESETS = {
@@ -128,32 +151,52 @@ for message in st.session_state.messages:
     elif message["role"] == "model":
         with st.chat_message("assistant"):
             st.write(message["parts"][0])
+def handle_user_input():
+    user_input = st.session_state.user_chat_input_key # chat_input の値をセッションステートから取得
 
+    if user_input: # ユーザーが何か入力した場合
+        st.session_state.messages.append({"role": "user", "parts": [user_input]})
 
-# ユーザーからの入力を受け取る
-if user_input := st.chat_input("メッセージを入力してね..."):
-    # ユーザーのメッセージを履歴に追加して表示
-    st.session_state.messages.append({"role": "user", "parts": [user_input]})
-    with st.chat_message("user"):
-        st.write(user_input)
+        chat_history_for_gemini = []
+        for msg in st.session_state.messages:
+            chat_history_for_gemini.append({"role": msg["role"], "parts": [{"text": p} if isinstance(p, str) else p for p in msg["parts"]]})
 
-    # Geminiにリクエストを送るための会話履歴を準備
-    # partsはリストのリストである必要があるため、調整
-    chat_history_for_gemini = []
-    for msg in st.session_state.messages:
-        # メッセージの "parts" が既にリスト形式であると仮定
-        chat_history_for_gemini.append({"role": msg["role"], "parts": [{"text": p} if isinstance(p, str) else p for p in msg["parts"]]})
+        # ai_response と generated_image_url を try ブロックの外で初期化
+        ai_response = ""
+        generated_image_url = None
 
-    # Geminiモデルとチャットセッションを開始
-    # send_messageは最新のユーザー入力だけを送るので、historyにはそれ以前のメッセージを渡す
-    try:
-        chat_session = model.start_chat(history=chat_history_for_gemini[:-1]) # 最新のユーザー入力は除外
+        try:
+            # ユーザーメッセージへの返答
+            chat_session = model.start_chat(history=chat_history_for_gemini[:-1])
+            with st.spinner("キャラクターが考えてるよ..."):
+                response = chat_session.send_message(user_input)
+                ai_response = response.text
 
-        # Geminiからの応答を取得
-        with st.spinner("キャラクターが考えてるよ..."):
-            response = chat_session.send_message(user_input) # 最新のユーザー入力だけを送る
-            ai_response = response.text
+            # --- 画像生成プロンプトの生成部分 ---
+            # Geminiに画像生成のプロンプトを依頼
+            image_gen_decision_prompt = f"Based on the latest conversation: '{user_input}', describe a relevant image for an AI image generator in English, or reply 'NO_IMAGE'."
+            
+            # モデルに画像を生成すべきか、プロンプトを生成させる
+            image_decision_response = model.generate_content(image_gen_decision_prompt)
+            image_gen_prompt_for_dalle = image_decision_response.text.strip()
 
+            # ★ここが重要: ログに出力して確認★
+            print(f"Gemini's image decision: {image_gen_prompt_for_dalle}") 
+
+            if image_gen_prompt_for_dalle and image_gen_prompt_for_dalle != "NO_IMAGE":
+                # DALL-Eなどの実際の呼び出しコード
+                with st.spinner("画像を生成中だよ... きらきら..."):
+                    generated_image_url = generate_image_with_dalle(image_gen_prompt_for_dalle)
+                
+                # ★DALL-Eの呼び出しが成功したら、生成されたURLもログに出力★
+                if generated_image_url:
+                    print(f"Generated image URL: {generated_image_url}")
+                else:
+                    print("Image generation failed or returned no URL.")
+
+            else:
+                print("Gemini decided not to generate an image (or returned NO_IMAGE).")
+                generated_image_url = None
     except Exception as e:
         ai_response = f"ごめんなさい、お話の途中でエラーが出ちゃったの...: {e}"
         st.error(ai_response)
@@ -162,3 +205,28 @@ if user_input := st.chat_input("メッセージを入力してね..."):
     st.session_state.messages.append({"role": "model", "parts": [ai_response]})
     with st.chat_message("assistant"):
         st.write(ai_response)
+if "last_generated_image_url" in st.session_state and st.session_state.last_generated_image_url:
+    generated_image_url_to_display = st.session_state.last_generated_image_url
+
+    # チャットメッセージの一部として画像を表示
+    # これは`for message in st.session_state.messages:`ループの中で表示する方が自然
+    # 今回は、最新の画像が常に背景になるように、かつチャットボックスの最下部に表示されるように変更
+
+    # 背景画像を変更するCSSを動的に適用
+    st.markdown(
+        f"""
+        <style>
+        body {{
+            background-image: url('{generated_image_url_to_display}');
+            background-size: cover;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            transition: background-image 1s ease-in-out;
+        }}
+        .stApp {{
+            background-color: rgba(255, 255, 255, 0.7); /* コンテンツ部分の透過度を調整 */
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True
+    )

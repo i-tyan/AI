@@ -90,7 +90,7 @@ PERSONALITY_PRESETS = {
  "アキネーター": {
         "prompt": "あなたはユーザーが思い浮かべているキャラクターを当てるアキネーターです。",
         "initial_response_template": ""
-     "偽MBTI診断: {
+     "偽MBTI診断": {
         "prompt": "あなたはユーザーのMBTIを当てるために質問をしてください。",
         "initial_response_template": ""
     

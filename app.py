@@ -209,10 +209,7 @@ generated_image_url = None # エラー時は画像なし
 if "last_generated_image_url" in st.session_state and st.session_state.last_generated_image_url:
     generated_image_url_to_display = st.session_state.last_generated_image_url
 
-    # チャットメッセージの一部として画像を表示
-    # これは`for message in st.session_state.messages:`ループの中で表示する方が自然
-    # 今回は、最新の画像が常に背景になるように、かつチャットボックスの最下部に表示されるように変更
-    # 背景画像を変更するCSSを動的に適用
+st.chat_input("メッセージを入力してね...", on_submit=handle_user_input, key="user_chat_input_key")
     st.markdown(
         f"""
         <style>

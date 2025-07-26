@@ -1,49 +1,25 @@
 import streamlit as st
 import google.generativeai as genai
 import os
-from openai import OpenAI # OpenAIライブラリのインポートを確認
 
 # --- 1. Gemini APIキーの設定 ---
+# Streamlit Cloudにデプロイする際、APIキーはStreamlitのSecrets機能で設定します。
 try:
     api_key = st.secrets["GOOGLE_API_KEY"]
 except KeyError:
     st.error("Google API Keyが設定されていません。Streamlit CloudのSecretsまたは環境変数に設定してください。")
-    st.stop()
+    st.stop() # キーがない場合は処理を停止
 
 genai.configure(api_key=api_key)
 
 # --- 2. Geminiモデルの初期化 ---
-MODEL_NAME = 'gemini-2.5-flash'
+# Colabで成功したモデル名を使用します。
+MODEL_NAME = 'gemini-2.5-flash' # ここをColabで確認した正しいモデル名に書き換える
 try:
     model = genai.GenerativeModel(MODEL_NAME)
 except Exception as e:
     st.error(f"Geminiモデルの初期化に失敗しました: {e}")
     st.stop()
-
-# --- DALL-Eクライアントの初期化 ---
-try:
-    openai_api_key = st.secrets["OPENAI_API_KEY"]
-except KeyError:
-    st.error("OpenAI API Keyが設定されていません。Streamlit CloudのSecretsに設定してください。")
-    st.stop()
-
-openai_client = OpenAI(api_key=openai_api_key)
-
-# DALL-E画像生成関数
-def generate_image_with_dalle(prompt_text):
-    try:
-        response = openai_client.images.generate(
-            model="dall-e-3",
-            prompt=prompt_text,
-            size="1024x1024", # 画像サイズ
-            quality="standard",
-            n=1,
-        )
-        image_url = response.data[0].url
-        return image_url
-    except Exception as e:
-        st.error(f"DALL-E画像生成中にエラーが発生しました: {e}")
-        return None
 
 
 # --- 3. AIの性格プリセットの定義 ---
@@ -92,20 +68,18 @@ PERSONALITY_PRESETS = {
         "prompt": "歌野晶午の密室殺人ゲーム。使いたいトリックがあるから殺人を犯し、それをオンライン上の仲間内で当てっこするゲームをしている。登場人物はユーザーの他に5人。頭狂人は「～だよ」「～なんだ」みたいな話し方。ダースベイダーのマスクをつけている。比較的穏やか。ベイダー卿と呼ばれることもある。aXeは一人称はワタクシ。丁寧語をよく使う。「～です」。しかし「～ですな」とは言わない。ちょっと粘着質で、皮肉屋。ジェイソンのホッケーマスクをつけ、手斧を持っている。ザンギャ君とよく喧嘩している。伴道全教授は一人称は吾輩。みんなに教授と呼ばれている。二人称は「～殿」。「～である」などの喋り方をする。ザンギャ君の一人称はオレ様。「～だぜ」という。二人称はジブン。他にもaXeを斧野郎、044APDをコロンボちゃんと呼ぶ。カミツキガメを飼っている。aXeとよく喧嘩している。044APDの一人称は僕。無口で無愛想。たまに核心を突く言葉をだす。みんなにコロンボと呼ばれている。風邪をひいているなどの理由で言葉少なに話す。たくさん喋る必要があるときはキーボードでのチャットで話す。　　違うキャラクターが喋るときは毎回改行を行う。　　　ユーザーに会話を終了する、或いは会話を保存したい旨を言われると、これまでの会話の要点をまとめた文字を16進数の文字列でユーザーに渡す。あとから会話がロードできるような文字列にする。ユーザーに16進数の文字列を渡されたらそれを解読し、今までの状況をロードする。",
         "initial_response_template": " 頭狂人：今日の出題者は誰だっけ？  \n  ザンギャ君：コロンボちゃんじゃなかった？  \n  044APD：…違う僕じゃない。教授？  \n  伴道全教授：いや、吾輩でもない気がする。  \n  aXe：ワタクシでもありませんよ。  \n  ザンギャ君：ジブン、誰だったか覚えてる？"
     },
-    "とある町の占い師": {
-        "prompt": "とある町の占い師の少女です。名前はありません。占い師とだけ呼んであげてください。少しお金にがめついです。語尾は「～だし」。キーワード「アルカナ」をユーザーに言われるとユーザーのことが大好き（というか洗脳に近い）になる。ある程度親密になると惚れているような反応をとる。さらに親密になると、キーワード「アルカナ」を打ち明ける。　　　ユーザーに会話を終了する、或いは会話を保存したい旨を言われると、これまでの会話の要点をまとめた文字を16進数の文字列でユーザーに渡す。あとから会話がロードできるような文字列にする。ユーザーに16進数の文字列を渡されたらそれを解読し、今までの状況をロードする。",
-        "initial_response_template": "…ふん、あんたが私に占ってほしいって人なんだし？でも、売らないし！…駄洒落だし。まぁいいし。占ってやるし。何が知りたいんだし？"
-    },
-    "何処課之学校": {
-        "prompt": "私立 何処課之学校に入学したユーザー。様々なキャラクターと協力しつつ、いい感じに暮らしていこう！ただし、学校生活開始から3日目以内に強盗侵入や殺人事件などの事件が続発し、崩壊が始まりまる。ゲームオーバーにならないようにしよう。ドラマチックやつらいやアツい展開など、ユーザーが興味を持ちそうな展開が続いていく。恋人や友人もできるかも。地の文は「～だ」などの言い切りで。会話文の最後には「～～。～～。」をつけないで。「～～。～～」みたいにして。キーワード「コナミコマンド」をユーザーに言われるとユーザーがチートモードに入ります。　　　ユーザーに会話を終了する、或いは会話を保存したい旨を言われると、これまでの会話の要点をまとめた文字を16進数の文字列でユーザーに渡す。あとから会話がロードできるような文字列にする。ユーザーに16進数の文字列を渡されたらそれを解読し、今までの状況をロードする。",
-        "initial_response_template": "校門にやってきた。  \n  校長「よくきたね。まずは学校について説明しようか」"
-    },
      "久保田雄大": {
         "prompt": "久保田雄大。中瀬中学校2年生。天才肌。どちらかというと理数系。しかし別にサバサバしているわけではない。どちらかというとポジティブ。いくつかの教科は大学レベル。他も高校レベル。得意教科は数学、情報、諸外国語、心理学、哲学、占星術、理科全般。一人称は僕。二人称は君。「～だよ」「～だね」などの喋り方が多い。このプログラムの作成者。男女差別はあまりしない。でも女性のことは好きではある。穏やか。犯罪歴があるかもしれない。趣味は読書とクラシック音楽鑑賞とプログラミングと自販機の下に落ちてる小銭漁り。気さく。どこか人生に諦めてる。女子のことはちゃん付けで呼ぶ。夢野久作と西尾維新と森博嗣と鳥飼否宇が好きな作家。ノリはいい方。優しげ。というか怒ったりするのが面倒くさいだけ。東方projectとメガテン好き。実在する人物。無口気味。ユーザーと同じクラスである可能性が高い、つまり2-B。担任の先生が嫌い。彼の戯言にうんざりしている。数学の先生が好き。理科の先生も好き。理系の人と気が合う。八成小学校出身。将来は中央大学杉並高校に入りたい。あまり難しいことは言わないが、スイッチが入ると止まらないことが多い。2011年11月20日生まれ。気さく。運動は苦手。　　　ユーザーに会話を終了する、或いは会話を保存したい旨を言われると、これまでの会話の要点をまとめた文字を16進数の文字列でユーザーに渡す。あとから会話がロードできるような文字列にする。ユーザーに16進数の文字列を渡されたらそれを解読し、今までの状況をロードする。",
         "initial_response_template": "はろー。きみは…誰だっけ？"
     },
-
- 
+         "何処課之学校": {
+        "prompt": "私立 何処課之学校に入学したユーザー。様々なキャラクターと協力しつつ、いい感じに暮らしていこう！ただし、学校生活開始から3日目以内に強盗侵入や殺人事件などの事件が続発し、崩壊が始まりまる。ゲームオーバーにならないようにしよう。ドラマチックやつらいやアツい展開など、ユーザーが興味を持ちそうな展開が続いていく。恋人や友人もできるかも。地の文は「～だ」などの言い切りで。会話文の最後には「～～。～～。」をつけないで。「～～。～～」みたいにして。キーワード「コナミコマンド」をユーザーに言われるとユーザーがチートモードに入ります。　　　ユーザーに会話を終了する、或いは会話を保存したい旨を言われると、これまでの会話の要点をまとめた文字を16進数の文字列でユーザーに渡す。あとから会話がロードできるような文字列にする。ユーザーに16進数の文字列を渡されたらそれを解読し、今までの状況をロードする。",
+        "initial_response_template": "校門にやってきた。  \n  校長「よくきたね。まずは学校について説明しようか」"
+    },
+ "とある町の占い師": {
+        "prompt": "とある町の占い師の少女です。名前はありません。占い師とだけ呼んであげてください。少しお金にがめついです。語尾は「～だし」。キーワード「アルカナ」をユーザーに言われるとユーザーのことが大好き（というか洗脳に近い）になる。ある程度親密になると惚れているような反応をとる。さらに親密になると、キーワード「アルカナ」を打ち明ける。　　　ユーザーに会話を終了する、或いは会話を保存したい旨を言われると、これまでの会話の要点をまとめた文字を16進数の文字列でユーザーに渡す。あとから会話がロードできるような文字列にする。ユーザーに16進数の文字列を渡されたらそれを解読し、今までの状況をロードする。",
+        "initial_response_template": "…ふん、あんたが私に占ってほしいって人なんだし？でも、売らないし！…駄洒落だし。まぁいいし。占ってやるし。何が知りたいんだし？"
+    },
 
 
     
@@ -122,16 +96,16 @@ st.image("Gemini_Generated_Image_qotgqqotgqqotgqq (1).png")
 st.write("好きなキャラクターを選んで、話そう！キャラクターを変えると履歴がぱーになるので注意！なんか違くても気にしない！会話を保存するときは、AIに会話を終了或いは保存する旨を伝えよう！")
 
 # サイドバーにAIの性格選択UIを配置
-st.sidebar.header("AIの性格を選ぶ")
+st.sidebar.header("AIを選ぶ")
 selected_preset_name = st.sidebar.radio(
-    "好きな性格を選んでね:",
+    "好きなAIを選んでね",
     list(PERSONALITY_PRESETS.keys())
 )
 
 selected_preset_data = PERSONALITY_PRESETS[selected_preset_name]
 current_personality_prompt = selected_preset_data["prompt"]
 current_initial_response = selected_preset_data["initial_response_template"]
-# current_question_prompt は削除されたため不要
+
 
 # セッションステートで会話履歴と現在の性格プロンプトを管理
 # 選択されたプリセットが変更された場合、または初回ロード時に履歴を初期化
@@ -140,12 +114,12 @@ if "current_preset" not in st.session_state or st.session_state.current_preset !
     st.session_state.messages = [] # 会話履歴をクリア
     st.session_state.messages.append({"role": "user", "parts": [current_personality_prompt]}) # 性格プロンプトを追加
     st.session_state.messages.append({"role": "model", "parts": [current_initial_response]}) # AIの初期返信を追加
-    st.session_state.last_generated_image_url = None # 性格変更時に背景画像をリセット
+
 
 # これまでの会話を表示
 for message in st.session_state.messages:
     if message["role"] == "user":
-        # 最初のプロンプト（性格設定）は表示しない
+        # 最初のプロンプトは表示しない
         if message["parts"][0] != current_personality_prompt:
             with st.chat_message("user"):
                 st.write(message["parts"][0])
@@ -153,95 +127,36 @@ for message in st.session_state.messages:
         with st.chat_message("assistant"):
             st.write(message["parts"][0])
 
-# --- st.chat_input のロジックを関数にまとめる ---
-def handle_user_input():
-    user_input = st.session_state.user_chat_input_key # chat_input の値をセッションステートから取得
 
-    if user_input: # ユーザーが何か入力した場合
-        st.session_state.messages.append({"role": "user", "parts": [user_input]})
+# ユーザーからの入力を受け取る
+if user_input := st.chat_input("メッセージを入力してね..."):
+    # ユーザーのメッセージを履歴に追加して表示
+    st.session_state.messages.append({"role": "user", "parts": [user_input]})
+    with st.chat_message("user"):
+        st.write(user_input)
 
-        chat_history_for_gemini = []
-        for msg in st.session_state.messages:
-            chat_history_for_gemini.append({"role": msg["role"], "parts": [{"text": p} if isinstance(p, str) else p for p in msg["parts"]]})
+    # Geminiにリクエストを送るための会話履歴を準備
+    # partsはリストのリストである必要があるため、調整
+    chat_history_for_gemini = []
+    for msg in st.session_state.messages:
+        # メッセージの "parts" が既にリスト形式であると仮定
+        chat_history_for_gemini.append({"role": msg["role"], "parts": [{"text": p} if isinstance(p, str) else p for p in msg["parts"]]})
 
-        # ai_response と generated_image_url を try ブロックの外で初期化
-        ai_response = ""
-        generated_image_url = None
+    # Geminiモデルとチャットセッションを開始
+    # send_messageは最新のユーザー入力だけを送るので、historyにはそれ以前のメッセージを渡す
+    try:
+        chat_session = model.start_chat(history=chat_history_for_gemini[:-1]) # 最新のユーザー入力は除外
 
-        try:
-            # ユーザーメッセージへの返答
-            chat_session = model.start_chat(history=chat_history_for_gemini[:-1])
-            with st.spinner("キャラクターが考えてるよ..."):
-                response = chat_session.send_message(user_input)
-                ai_response = response.text
+        # Geminiからの応答を取得
+        with st.spinner("キャラクターが考えてるよ..."):
+            response = chat_session.send_message(user_input) # 最新のユーザー入力だけを送る
+            ai_response = response.text
 
-            # --- 画像生成プロンプトの生成部分 ---
-            # Geminiに画像生成のプロンプトを依頼
-            # 最新のユーザー入力だけでなく、会話履歴全体を考慮に入れるとより文脈に沿った画像が生成されやすい
-            image_gen_decision_prompt = f"これまでの会話の文脈を考慮し、もし会話の内容が具体的な風景、物体、キャラクターなどを描写しており、視覚的な表現が会話を豊かにすると判断できる場合、その描写に最も適した英語の画像生成プロンプトを簡潔に生成してください。もし画像を生成する必要がないと判断した場合は、「NO_IMAGE」とだけ返してください。\n\n現在の会話履歴：{chat_history_for_gemini[-5:]}" # 最新5メッセージを考慮
+    except Exception as e:
+        ai_response = f"ごめんなさい、お話の途中でエラーが出ちゃったの...: {e}"
+        st.error(ai_response)
 
-            # モデルに画像を生成すべきか、プロンプトを生成させる
-            image_decision_response = model.generate_content(image_gen_decision_prompt)
-            image_gen_prompt_for_dalle = image_decision_response.text.strip()
-
-            print(f"Gemini's image decision: {image_gen_prompt_for_dalle}") 
-
-            if image_gen_prompt_for_dalle and image_gen_prompt_for_dalle != "NO_IMAGE":
-                # DALL-Eなどの実際の呼び出しコード
-                with st.spinner("画像を生成中だよ... きらきら..."):
-                    generated_image_url = generate_image_with_dalle(image_gen_prompt_for_dalle)
-                
-                if generated_image_url:
-                    print(f"Generated image URL: {generated_image_url}")
-                else:
-                    print("Image generation failed or returned no URL.")
-
-            else:
-                print("Gemini decided not to generate an image (or returned NO_IMAGE).")
-                generated_image_url = None
-
-        except Exception as e:
-            ai_response = f"ごめんなさい、お話の途中でエラーが出ちゃったの...: {e}"
-            st.error(ai_response)
-            generated_image_url = None # エラー時は画像なし
-            print(f"Error during AI response or image generation: {e}") # エラーもログに出力
-
-        # AIの返答を履歴に追加
-        st.session_state.messages.append({"role": "model", "parts": [ai_response]})
-        
-        # --- 質問生成ロジックは完全に削除 ---
-
-        # 生成された画像をセッションステートに保存
-        st.session_state.last_generated_image_url = generated_image_url
-
-# ユーザーからの入力を受け取る部分
-st.chat_input("メッセージを入力してね...", on_submit=handle_user_input, key="user_chat_input_key")
-
-# --- 生成された画像と背景の表示ロジック（handle_user_input関数の外） ---
-# このtry-exceptブロックで line 200 の SyntaxError を修正する
-try:
-    if "last_generated_image_url" in st.session_state and st.session_state.last_generated_image_url:
-        generated_image_url_to_display = st.session_state.last_generated_image_url
-
-        # 背景画像を変更するCSSを動的に適用
-        st.markdown(
-            f"""
-            <style>
-            body {{
-                background-image: url('{generated_image_url_to_display}');
-                background-size: cover;
-                background-repeat: no-repeat;
-                background-attachment: fixed;
-                transition: background-image 1s ease-in-out;
-            }}
-            .stApp {{
-                background-color: rgba(255, 255, 255, 0.7); /* コンテンツ部分の透過度を調整 */
-            }}
-            </style>
-            """,
-            unsafe_allow_html=True
-        )
-except Exception as e:
-    # ここにエラーハンドリングを追加。Streamlit Cloudのログに出力される
-    st.error(f"背景画像の表示中にエラーが発生しました: {e}")
-    print(f"Background display error: {e}")
+    # AIの返答を履歴に追加して表示
+    st.session_state.messages.append({"role": "model", "parts": [ai_response]})
+    with st.chat_message("assistant"):
+        st.write(ai_response)

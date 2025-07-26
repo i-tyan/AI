@@ -185,7 +185,7 @@ def handle_user_input():
 
             if image_gen_prompt_for_dalle and image_gen_prompt_for_dalle != "NO_IMAGE":
                 # DALL-Eなどの実際の呼び出しコード
-                with st.spinner("画像を生成中だよ... きらきら..."):
+                with st.spinner("画像を生成中だよ... "):
                     generated_image_url = generate_image_with_dalle(image_gen_prompt_for_dalle)
                 
                 # ★DALL-Eの呼び出しが成功したら、生成されたURLもログに出力★
@@ -212,7 +212,6 @@ if "last_generated_image_url" in st.session_state and st.session_state.last_gene
     # チャットメッセージの一部として画像を表示
     # これは`for message in st.session_state.messages:`ループの中で表示する方が自然
     # 今回は、最新の画像が常に背景になるように、かつチャットボックスの最下部に表示されるように変更
-
     # 背景画像を変更するCSSを動的に適用
     st.markdown(
         f"""

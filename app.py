@@ -200,7 +200,8 @@ def handle_user_input():
     except Exception as e:
         ai_response = f"ごめんなさい、お話の途中でエラーが出ちゃったの...: {e}"
         st.error(ai_response)
-
+generated_image_url = None # エラー時は画像なし
+            print(f"Error during AI response or image generation: {e}")
     # AIの返答を履歴に追加して表示
     st.session_state.messages.append({"role": "model", "parts": [ai_response]})
     with st.chat_message("assistant"):

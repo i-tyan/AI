@@ -13,7 +13,7 @@ except KeyError:
 genai.configure(api_key=api_key)
 
 # --- 2. Geminiモデルの初期化 ---
-MODEL_NAME = 'gemini-1.0-pro'
+MODEL_NAME = 'gemini-2.5-flash'
 try:
     model = genai.GenerativeModel(MODEL_NAME)
 except Exception as e:

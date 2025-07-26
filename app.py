@@ -2,25 +2,25 @@ import streamlit as st
 import google.generativeai as genai
 import os
 from openai import OpenAI # OpenAIライブラリのインポートを確認
+
 # --- 1. Gemini APIキーの設定 ---
-# Streamlit Cloudにデプロイする際、APIキーはStreamlitのSecrets機能で設定します。
 try:
     api_key = st.secrets["GOOGLE_API_KEY"]
 except KeyError:
     st.error("Google API Keyが設定されていません。Streamlit CloudのSecretsまたは環境変数に設定してください。")
-    st.stop() # キーがない場合は処理を停止
+    st.stop()
 
 genai.configure(api_key=api_key)
 
 # --- 2. Geminiモデルの初期化 ---
-# Colabで成功したモデル名を使用します。
-MODEL_NAME = 'gemini-2.5-flash' # ここをColabで確認した正しいモデル名に書き換える
+MODEL_NAME = 'gemini-1.0-pro'
 try:
     model = genai.GenerativeModel(MODEL_NAME)
 except Exception as e:
     st.error(f"Geminiモデルの初期化に失敗しました: {e}")
     st.stop()
 
+# --- DALL-Eクライアントの初期化 ---
 try:
     openai_api_key = st.secrets["OPENAI_API_KEY"]
 except KeyError:
@@ -29,13 +29,13 @@ except KeyError:
 
 openai_client = OpenAI(api_key=openai_api_key)
 
-# DALL-E画像生成関数（追加）
+# DALL-E画像生成関数
 def generate_image_with_dalle(prompt_text):
     try:
         response = openai_client.images.generate(
             model="dall-e-3",
             prompt=prompt_text,
-            size="1024x1024",
+            size="1024x1024", # 画像サイズ
             quality="standard",
             n=1,
         )
@@ -44,6 +44,7 @@ def generate_image_with_dalle(prompt_text):
     except Exception as e:
         st.error(f"DALL-E画像生成中にエラーが発生しました: {e}")
         return None
+
 
 # --- 3. AIの性格プリセットの定義 ---
 PERSONALITY_PRESETS = {
@@ -121,16 +122,16 @@ st.image("Gemini_Generated_Image_qotgqqotgqqotgqq (1).png")
 st.write("好きなキャラクターを選んで、話そう！キャラクターを変えると履歴がぱーになるので注意！なんか違くても気にしない！会話を保存するときは、AIに会話を終了或いは保存する旨を伝えよう！")
 
 # サイドバーにAIの性格選択UIを配置
-st.sidebar.header("AIを選ぶ")
+st.sidebar.header("AIの性格を選ぶ")
 selected_preset_name = st.sidebar.radio(
-    "好きなAIを選んでね",
+    "好きな性格を選んでね:",
     list(PERSONALITY_PRESETS.keys())
 )
 
 selected_preset_data = PERSONALITY_PRESETS[selected_preset_name]
 current_personality_prompt = selected_preset_data["prompt"]
 current_initial_response = selected_preset_data["initial_response_template"]
-
+# current_question_prompt は削除されたため不要
 
 # セッションステートで会話履歴と現在の性格プロンプトを管理
 # 選択されたプリセットが変更された場合、または初回ロード時に履歴を初期化
@@ -139,18 +140,20 @@ if "current_preset" not in st.session_state or st.session_state.current_preset !
     st.session_state.messages = [] # 会話履歴をクリア
     st.session_state.messages.append({"role": "user", "parts": [current_personality_prompt]}) # 性格プロンプトを追加
     st.session_state.messages.append({"role": "model", "parts": [current_initial_response]}) # AIの初期返信を追加
-
+    st.session_state.last_generated_image_url = None # 性格変更時に背景画像をリセット
 
 # これまでの会話を表示
 for message in st.session_state.messages:
     if message["role"] == "user":
-        # 最初のプロンプトは表示しない
+        # 最初のプロンプト（性格設定）は表示しない
         if message["parts"][0] != current_personality_prompt:
             with st.chat_message("user"):
                 st.write(message["parts"][0])
     elif message["role"] == "model":
         with st.chat_message("assistant"):
             st.write(message["parts"][0])
+
+# --- st.chat_input のロジックを関数にまとめる ---
 def handle_user_input():
     user_input = st.session_state.user_chat_input_key # chat_input の値をセッションステートから取得
 
@@ -174,21 +177,20 @@ def handle_user_input():
 
             # --- 画像生成プロンプトの生成部分 ---
             # Geminiに画像生成のプロンプトを依頼
-            image_gen_decision_prompt = f"Based on the latest conversation: '{user_input}', describe a relevant image for an AI image generator in English, or reply 'NO_IMAGE'."
-            
+            # 最新のユーザー入力だけでなく、会話履歴全体を考慮に入れるとより文脈に沿った画像が生成されやすい
+            image_gen_decision_prompt = f"これまでの会話の文脈を考慮し、もし会話の内容が具体的な風景、物体、キャラクターなどを描写しており、視覚的な表現が会話を豊かにすると判断できる場合、その描写に最も適した英語の画像生成プロンプトを簡潔に生成してください。もし画像を生成する必要がないと判断した場合は、「NO_IMAGE」とだけ返してください。\n\n現在の会話履歴：{chat_history_for_gemini[-5:]}" # 最新5メッセージを考慮
+
             # モデルに画像を生成すべきか、プロンプトを生成させる
             image_decision_response = model.generate_content(image_gen_decision_prompt)
             image_gen_prompt_for_dalle = image_decision_response.text.strip()
 
-            # ★ここが重要: ログに出力して確認★
             print(f"Gemini's image decision: {image_gen_prompt_for_dalle}") 
 
             if image_gen_prompt_for_dalle and image_gen_prompt_for_dalle != "NO_IMAGE":
                 # DALL-Eなどの実際の呼び出しコード
-                with st.spinner("画像を生成中だよ... "):
+                with st.spinner("画像を生成中だよ... きらきら..."):
                     generated_image_url = generate_image_with_dalle(image_gen_prompt_for_dalle)
                 
-                # ★DALL-Eの呼び出しが成功したら、生成されたURLもログに出力★
                 if generated_image_url:
                     print(f"Generated image URL: {generated_image_url}")
                 else:
@@ -197,36 +199,49 @@ def handle_user_input():
             else:
                 print("Gemini decided not to generate an image (or returned NO_IMAGE).")
                 generated_image_url = None
-    except Exception as e:
-        ai_response = f"ごめんなさい、お話の途中でエラーが出ちゃったの...: {e}"
-        st.error(ai_response)
-generated_image_url = None # エラー時は画像なし
-            print(f"Error during AI response or image generation: {e}")
-    # AIの返答を履歴に追加して表示
-    st.session_state.messages.append({"role": "model", "parts": [ai_response]})
-    with st.chat_message("assistant"):
-        st.write(ai_response)
-if "last_generated_image_url" in st.session_state and st.session_state.last_generated_image_url:
-    generated_image_url_to_display = st.session_state.last_generated_image_url
 
+        except Exception as e:
+            ai_response = f"ごめんなさい、お話の途中でエラーが出ちゃったの...: {e}"
+            st.error(ai_response)
+            generated_image_url = None # エラー時は画像なし
+            print(f"Error during AI response or image generation: {e}") # エラーもログに出力
+
+        # AIの返答を履歴に追加
+        st.session_state.messages.append({"role": "model", "parts": [ai_response]})
+        
+        # --- 質問生成ロジックは完全に削除 ---
+
+        # 生成された画像をセッションステートに保存
+        st.session_state.last_generated_image_url = generated_image_url
+
+# ユーザーからの入力を受け取る部分
 st.chat_input("メッセージを入力してね...", on_submit=handle_user_input, key="user_chat_input_key")
-    st.markdown(
-        f"""
-        <style>
-        body {{
-            background-image: url('{generated_image_url_to_display}');
-            background-size: cover;
-            background-repeat: no-repeat;
-            background-attachment: fixed;
-            transition: background-image 1s ease-in-out;
-        }}
-        .stApp {{
-            background-color: rgba(255, 255, 255, 0.7); /* コンテンツ部分の透過度を調整 */
-        }}
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
-except Exception as e: # この except ブロックを追加する
-    st.error(f"背景の表示中にエラーが発生しました: {e}")
+
+# --- 生成された画像と背景の表示ロジック（handle_user_input関数の外） ---
+# このtry-exceptブロックで line 200 の SyntaxError を修正する
+try:
+    if "last_generated_image_url" in st.session_state and st.session_state.last_generated_image_url:
+        generated_image_url_to_display = st.session_state.last_generated_image_url
+
+        # 背景画像を変更するCSSを動的に適用
+        st.markdown(
+            f"""
+            <style>
+            body {{
+                background-image: url('{generated_image_url_to_display}');
+                background-size: cover;
+                background-repeat: no-repeat;
+                background-attachment: fixed;
+                transition: background-image 1s ease-in-out;
+            }}
+            .stApp {{
+                background-color: rgba(255, 255, 255, 0.7); /* コンテンツ部分の透過度を調整 */
+            }}
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
+except Exception as e:
+    # ここにエラーハンドリングを追加。Streamlit Cloudのログに出力される
+    st.error(f"背景画像の表示中にエラーが発生しました: {e}")
     print(f"Background display error: {e}")

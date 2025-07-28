@@ -25,7 +25,7 @@ except Exception as e:
 # モデル名は 'gemini-1.5-flash' や 'gemini-1.5-pro'、またはその時点での最新の画像生成対応モデル
 # Google AI StudioのAPI呼び出し例で画像生成に対応しているモデル名を確認してください。
 # 例: 'gemini-1.5-flash' はテキストと画像を同時に生成できる可能性が高い
-MULTI_MODAL_MODEL_NAME = 'gemini-2.5-flash' # または 'gemini-1.5-pro', 'gemini-2.0-flash-preview-image-generation' など
+MULTI_MODAL_MODEL_NAME = 'gemini-2.0-flash-preview-image-generation' # または 'gemini-1.5-pro', 'gemini-2.0-flash-preview-image-generation' など
 try:
     # マルチモーダルモデルは、安全性設定を調整することも可能
     multi_modal_model = genai.GenerativeModel(
@@ -223,7 +223,7 @@ def handle_user_input():
             Geminiの返答: "A small, cute fairy dancing happily in a vibrant field of wildflowers."
 
             例3:
-            会話: 「今日の天気は晴れで、気分がいいね。」
+            会話: 「今日は気分がいいね。」
             Geminiの返答: "NO_IMAGE"
 
             最新のユーザーメッセージ: "{user_input}"
@@ -239,7 +239,7 @@ def handle_user_input():
 
             # --- 3. 画像生成プロンプトが「NO_IMAGE」でなければ、マルチモーダルモデルで画像を生成 ---
             if image_gen_prompt_for_gemini and image_gen_prompt_for_gemini != "NO_IMAGE":
-                with st.spinner("画像を生成中だよ... きらきら..."):
+                with st.spinner("画像を生成中だよ..."):
                     try:
                         # ここが重要: プロンプトに画像生成の指示を含める
                         # `response_mime_types` は使わない

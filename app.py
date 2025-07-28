@@ -2,9 +2,9 @@ import streamlit as st
 import google.generativeai as genai
 import os
 
-# --- 1. Gemini APIキーの設定 ---
-# Streamlit Cloudにデプロイする際、APIキーはStreamlitのSecrets機能で設定します。
+# --- 1. Google Gemini APIキーの設定 ---
 try:
+    # GOOGLE_API_KEYはGeminiのテキスト生成と画像生成の両方に使われる
     api_key = st.secrets["GOOGLE_API_KEY"]
 except KeyError:
     st.error("Google API Keyが設定されていません。Streamlit CloudのSecretsまたは環境変数に設定してください。")
@@ -13,13 +13,31 @@ except KeyError:
 genai.configure(api_key=api_key)
 
 # --- 2. Geminiモデルの初期化 ---
-# Colabで成功したモデル名を使用します。
-MODEL_NAME = 'gemini-2.5-flash' # ここをColabで確認した正しいモデル名に書き換える
+# テキスト生成用のモデル
+TEXT_MODEL_NAME = 'gemini-2.5-flash'
 try:
-    model = genai.GenerativeModel(MODEL_NAME)
+    text_model = genai.GenerativeModel(TEXT_MODEL_NAME)
 except Exception as e:
-    st.error(f"Geminiモデルの初期化に失敗しました: {e}")
+    st.error(f"テキスト生成用Geminiモデルの初期化に失敗しました: {e}")
     st.stop()
+
+
+IMAGE_GEN_MODEL_NAME = 'gemini-2.5-flash' # または 'gemini-2.0-flash-preview-image-generation'
+try:
+    image_gen_model = genai.GenerativeModel(
+        model_name=IMAGE_GEN_MODEL_NAME,
+        safety_settings={
+            # 安全設定は適切に調整してください
+            genai.types.HarmCategory.HARM_CATEGORY_HATE_SPEECH: genai.types.HarmBlockThreshold.BLOCK_NONE,
+            genai.types.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: genai.types.HarmBlockThreshold.BLOCK_NONE,
+            genai.types.HarmCategory.HARM_CATEGORY_HARASSMENT: genai.types.HarmBlockThreshold.BLOCK_NONE,
+            genai.types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: genai.types.HarmBlockThreshold.BLOCK_NONE,
+        }
+    )
+except Exception as e:
+    st.error(f"画像生成用Geminiモデルの初期化に失敗しました: {e}")
+    st.stop()
+
 
 # --- 3. AIの性格プリセットの定義 ---
 PERSONALITY_PRESETS = {
@@ -107,16 +125,18 @@ PERSONALITY_PRESETS = {
 st.image("Gemini_Generated_Image_qotgqqotgqqotgqq (1).png")
 st.write("好きなキャラクターを選んで、話そう！キャラクターを変えると履歴がぱーになるので注意！なんか違くても気にしない！会話を保存するときは、AIに会話を終了或いは保存する旨を伝えよう！")
 
+
 # サイドバーにAIの性格選択UIを配置
-st.sidebar.header("AIを選ぶ")
+st.sidebar.header("AIの性格を選ぶ")
 selected_preset_name = st.sidebar.radio(
-    "好きなAIを選んでね",
+    "好きな性格を選んでね:",
     list(PERSONALITY_PRESETS.keys())
 )
 
 selected_preset_data = PERSONALITY_PRESETS[selected_preset_name]
 current_personality_prompt = selected_preset_data["prompt"]
 current_initial_response = selected_preset_data["initial_response_template"]
+current_question_prompt = selected_preset_data["question_prompt"]
 
 
 # セッションステートで会話履歴と現在の性格プロンプトを管理
@@ -126,49 +146,170 @@ if "current_preset" not in st.session_state or st.session_state.current_preset !
     st.session_state.messages = [] # 会話履歴をクリア
     st.session_state.messages.append({"role": "user", "parts": [current_personality_prompt]}) # 性格プロンプトを追加
     st.session_state.messages.append({"role": "model", "parts": [current_initial_response]}) # AIの初期返信を追加
+    # 新しいセッション開始時に画像履歴もクリア
+    st.session_state.last_generated_image_url = None 
 
 
 # これまでの会話を表示
 for message in st.session_state.messages:
     if message["role"] == "user":
-        # 最初のプロンプトは表示しない
+        # 最初のプロンプト（性格設定）は表示しない
         if message["parts"][0] != current_personality_prompt:
             with st.chat_message("user"):
                 st.write(message["parts"][0])
     elif message["role"] == "model":
         with st.chat_message("assistant"):
-            st.write(message["parts"][0])
+            # partsにテキストと画像が混在する可能性があるので、それぞれ処理
+            for part in message["parts"]:
+                if isinstance(part, str): # テキストの場合
+                    st.write(part)
+                elif isinstance(part, dict) and part.get('mime_type', '').startswith('image/'): # 画像の場合
+                    # Geminiはbase64で画像を返すことが多いので、直接st.imageで表示できるように調整
+                    # Base64を扱うにはPIL (Pillow) が必要になる場合もある
+                    if 'data' in part:
+                        # base64エンコードされた画像データを直接表示
+                        st.image(f"data:{part['mime_type']};base64,{part['data']}", caption="AIが生成したイメージだよ！")
+                    elif 'file_uri' in part:
+                        # ファイルURI形式の場合（Vertex AIなど）
+                        st.image(part['file_uri'], caption="AIが生成したイメージだよ！")
+                    # ここに他の形式の画像データ対応を追加できる
+                
+# --- ユーザー入力とAI応答処理を関数にまとめる ---
+def handle_user_input():
+    user_input = st.session_state.user_chat_input_key
+
+    if user_input:
+        st.session_state.messages.append({"role": "user", "parts": [user_input]})
+
+        chat_history_for_gemini = []
+        for msg in st.session_state.messages:
+            # Geminiに渡す履歴は、テキストのみにするか、対応する形式に合わせる
+            # ここでは画像パートを省略し、テキストのみを履歴として渡す（画像生成判断時も同様）
+            text_parts = [p if isinstance(p, str) else p.get('text', '') for p in msg["parts"] if isinstance(p, str) or (isinstance(p, dict) and 'text' in p)]
+            if text_parts:
+                chat_history_for_gemini.append({"role": msg["role"], "parts": [{"text": " ".join(text_parts)}]})
 
 
-# ユーザーからの入力を受け取る
-if user_input := st.chat_input("メッセージを入力してね..."):
-    # ユーザーのメッセージを履歴に追加して表示
-    st.session_state.messages.append({"role": "user", "parts": [user_input]})
-    with st.chat_message("user"):
-        st.write(user_input)
+        ai_response_parts = [] # AIの返答はテキストと画像のリストになる可能性がある
+        generated_image_url = None # 背景設定用URL（最終的に表示される画像）
 
-    # Geminiにリクエストを送るための会話履歴を準備
-    # partsはリストのリストである必要があるため、調整
-    chat_history_for_gemini = []
-    for msg in st.session_state.messages:
-        # メッセージの "parts" が既にリスト形式であると仮定
-        chat_history_for_gemini.append({"role": msg["role"], "parts": [{"text": p} if isinstance(p, str) else p for p in msg["parts"]]})
+        try:
+            # --- 1. まず通常のテキスト応答を生成 ---
+            chat_session = text_model.start_chat(history=chat_history_for_gemini[:-1])
+            with st.spinner("キャラクターが考えてるよ..."):
+                response = chat_session.send_message(user_input)
+                ai_response_text = response.text
+                ai_response_parts.append(ai_response_text)
+                print(f"AI Text Response: {ai_response_text}") # デバッグ用ログ
 
-    # Geminiモデルとチャットセッションを開始
-    # send_messageは最新のユーザー入力だけを送るので、historyにはそれ以前のメッセージを渡す
-    try:
-        chat_session = model.start_chat(history=chat_history_for_gemini[:-1]) # 最新のユーザー入力は除外
+            # --- 2. 画像生成が必要かGeminiに判断させるプロンプトを生成 ---
+            # 会話の最新の部分と、全体の流れを考慮させる
+            image_decision_prompt = f"""
+            これまでの会話の文脈を考慮し、もし会話の内容が以下のような、具体的で視覚的な表現を必要とする描写（例: 風景、物体、キャラクター、抽象的な概念の具現化など）を含んでおり、画像を生成することで会話が豊かになると判断できる場合、その描写に最も適した英語の画像生成プロンプトを簡潔に生成してください。
+            もし画像を生成する必要がないと判断した場合は、「NO_IMAGE」とだけ返してください。
 
-        # Geminiからの応答を取得
-        with st.spinner("キャラクターが考えてるよ..."):
-            response = chat_session.send_message(user_input) # 最新のユーザー入力だけを送る
-            ai_response = response.text
+            例1:
+            会話: 「昨日、すごくきれいな夕焼けを見たんだ。空が赤くて、雲がピンク色だったよ。」
+            Geminiの返答: "A beautiful sunset with a red sky and pink clouds over a calm ocean."
 
-    except Exception as e:
-        ai_response = f"ごめんなさい、お話の途中でエラーが出ちゃったの...: {e}"
-        st.error(ai_response)
+            例2:
+            会話: 「妖精さんがお花畑で踊っている絵が見たいな。」
+            Geminiの返答: "A small, cute fairy dancing happily in a vibrant field of wildflowers."
 
-    # AIの返答を履歴に追加して表示
-    st.session_state.messages.append({"role": "model", "parts": [ai_response]})
-    with st.chat_message("assistant"):
-        st.write(ai_response)
+            例3:
+            会話: 「今日の天気は晴れで、気分がいいね。」
+            Geminiの返答: "NO_IMAGE"
+
+            最新のユーザーメッセージ: "{user_input}"
+            これまでの会話の要約（省略可能、長すぎるとトークン消費）：{ai_response_text[:100]}...
+
+            画像生成プロンプト（またはNO_IMAGE）を教えてください:
+            """
+            
+            # テキストモデルを使って画像生成の判断プロンプトを生成
+            image_decision_response = text_model.generate_content(image_decision_prompt)
+            image_gen_prompt_for_gemini = image_decision_response.text.strip()
+            print(f"Gemini's image decision: {image_gen_prompt_for_gemini}") # デバッグ用ログ
+
+            # --- 3. 画像生成プロンプトが「NO_IMAGE」でなければ画像を生成 ---
+            if image_gen_prompt_for_gemini and image_gen_prompt_for_gemini != "NO_IMAGE":
+                with st.spinner("画像を生成中だよ... きらきら..."):
+                    try:
+                        # 画像生成モデルを呼び出す
+                        image_response = image_gen_model.generate_content(
+                            image_gen_prompt_for_gemini,
+                            response_mime_types=['image/jpeg'] # JPEG形式の画像を要求
+                        )
+
+                        # レスポンスから画像データを抽出
+                        for part in image_response.candidates[0].content.parts:
+                            if part.mime_type and part.mime_type.startswith('image/'):
+                                # Geminiの画像はBase64エンコードされたバイトデータで返されることが多い
+                                if hasattr(part, 'data'):
+                                    # Base64データを直接表示
+                                    generated_image_url = f"data:{part.mime_type};base64,{part.data}"
+                                    ai_response_parts.append({"mime_type": part.mime_type, "data": part.data}) # 会話履歴にも画像データを追加
+                                    print(f"Generated Base64 Image Data (first 50 chars): {part.data[:50]}...") # デバッグ用ログ
+                                else:
+                                    print("Gemini returned image but no direct data attribute found.")
+                                break
+                        if not generated_image_url:
+                            print("No image data found in Gemini response.")
+
+                    except Exception as img_e:
+                        st.warning(f"画像生成に失敗したもん... {img_e}")
+                        generated_image_url = None
+                        print(f"Image generation error: {img_e}") # エラーログ
+
+            else:
+                print("Gemini decided not to generate an image (or returned NO_IMAGE).")
+                generated_image_url = None
+
+        except Exception as e:
+            ai_response_parts = [f"ごめんなさい、お話の途中でエラーが出ちゃったの...: {e}"]
+            st.error(ai_response_parts[0])
+            generated_image_url = None
+            print(f"Overall AI response or image generation error: {e}") # エラーログ
+
+        # AIの返答（テキストと画像が含まれる可能性あり）を履歴に追加
+        st.session_state.messages.append({"role": "model", "parts": ai_response_parts})
+        
+        
+
+        # --- 生成された画像をセッションステートに保存（背景用） ---
+        st.session_state.last_generated_image_url = generated_image_url
+
+# ユーザーからの入力を受け取る部分
+st.chat_input("メッセージを入力してね...", on_submit=handle_user_input, key="user_chat_input_key")
+
+# --- 生成された画像と背景の表示ロジック（handle_user_input関数の外） ---
+if "last_generated_image_url" in st.session_state and st.session_state.last_generated_image_url:
+    generated_image_url_to_display = st.session_state.last_generated_image_url
+
+    # 背景画像を変更するCSSを動的に適用
+    st.markdown(
+        f"""
+        <style>
+        body {{
+            background-image: url('{generated_image_url_to_display}');
+            background-size: cover;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            transition: background-image 1s ease-in-out;
+        }}
+        .stApp {{
+            background-color: rgba(255, 255, 255, 0.7); /* コンテンツ部分の透過度を調整 */
+            border-radius: 10px; /* 角を少し丸める */
+            padding: 20px; /* 内側の余白 */
+        }}
+        /* チャットメッセージの背景も調整して読みやすくする */
+        .stChatMessage {{
+            background-color: rgba(255, 255, 255, 0.85); /* メッセージボックスの背景を少し透明に */
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True
+    )

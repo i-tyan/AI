@@ -236,13 +236,12 @@ def handle_user_input():
 
             画像生成プロンプト（またはNO_IMAGE）を教えてください:
             """
-            
             # テキストモデルを使って画像生成の判断プロンプトを生成
             image_decision_response = text_model.generate_content(image_decision_prompt)
             image_gen_prompt_for_gemini = image_decision_response.text.strip()
             print(f"Gemini's image decision: {image_gen_prompt_for_gemini}") # デバッグ用ログ
 
-            # --- 3. 画像生成プロンプトが「NO_IMAGE」でなければ画像を生成 ---
+            # --- 3. 画像生成プロンプトが「NO_IMAGE」でなければ、マルチモーダルモデルで画像を生成 ---
             if image_gen_prompt_for_gemini and image_gen_prompt_for_gemini != "NO_IMAGE":
                 with st.spinner("画像を生成中だよ..."):
                 try:

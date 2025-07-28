@@ -200,8 +200,9 @@ def handle_user_input():
                 response = chat_session.send_message(user_input)
                 ai_response_text = response.text
                 ai_response_parts.append(ai_response_text)
-                print(f"AI Text Response: {ai_response_text}") # デバッグ用ログ
+           
 
+            
             # --- 2. 画像生成が必要かGeminiに判断させるプロンプトを生成 ---
             # 会話の最新の部分と、全体の流れを考慮させる
             image_decision_prompt = f"""

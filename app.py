@@ -136,7 +136,7 @@ selected_preset_name = st.sidebar.radio(
 selected_preset_data = PERSONALITY_PRESETS[selected_preset_name]
 current_personality_prompt = selected_preset_data["prompt"]
 current_initial_response = selected_preset_data["initial_response_template"]
-current_question_prompt = selected_preset_data["question_prompt"]
+
 
 
 # セッションステートで会話履歴と現在の性格プロンプトを管理

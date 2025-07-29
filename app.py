@@ -1,7 +1,9 @@
 import streamlit as st
 import google.generativeai as genai
 import os
-
+from PIL import Image # Pillowライブラリのインポートを追加
+from io import BytesIO
+import base64
 # --- 1. Google Gemini APIキーの設定 ---
 try:
     api_key = st.secrets["GOOGLE_API_KEY"]
@@ -31,10 +33,10 @@ try:
     multi_modal_model = genai.GenerativeModel(
         model_name=MULTI_MODAL_MODEL_NAME,
         safety_settings={
-            genai.type.HarmCategory.HARM_CATEGORY_HATE_SPEECH: genai.type.HarmBlockThreshold.BLOCK_NONE,
-            genai.type.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: genai.type.HarmBlockThreshold.BLOCK_NONE,
-            genai.type.HarmCategory.HARM_CATEGORY_HARASSMENT: genai.type.HarmBlockThreshold.BLOCK_NONE,
-            genai.type.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: genai.type.HarmBlockThreshold.BLOCK_NONE,
+            genai.types.HarmCategory.HARM_CATEGORY_HATE_SPEECH: genai.types.HarmBlockThreshold.BLOCK_NONE,
+            genai.types.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: genai.types.HarmBlockThreshold.BLOCK_NONE,
+            genai.types.HarmCategory.HARM_CATEGORY_HARASSMENT: genai.types.HarmBlockThreshold.BLOCK_NONE,
+            genai.types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: genai.types.HarmBlockThreshold.BLOCK_NONE,
         }
     )
 except Exception as e:
@@ -238,18 +240,16 @@ def handle_user_input():
 
             # --- 3. 画像生成プロンプトが「NO_IMAGE」でなければ、マルチモーダルモデルで画像を生成 ---
             if image_gen_prompt_for_gemini and image_gen_prompt_for_gemini != "NO_IMAGE":
-                with st.spinner("画像を生成中だよ... きらきら..."):
-                    try:
-                        # ここが重要: プロンプトに画像生成の指示を含める
-                        # `generation_config` で応答のモダリティを指定
+                with st.spinner("画像を生成中だよ..."):
+                try:
+                        # ここを修正: response_mime_types を response_mime_type に変更し、単一のMIMEタイプを文字列で渡す
                         image_response = multi_modal_model.generate_content(
                             [
                                 f"Generate an image based on the following description: {image_gen_prompt_for_gemini}",
-                                # テキストも必要なら、空のテキストパートを追加
-                                "" 
+                                "" # テキストも必要な場合のために空のテキストパートを追加
                             ],
-                            generation_config=genai.type.GenerationConfig(
-                                response_mime_type=['text/plain', 'image/jpeg'] # テキストと画像の両方を要求
+                            generation_config=genai.types.GenerationConfig(
+                                response_mime_type='image/jpeg' # ★ここを修正！単数形にして文字列で渡す★
                             )
                         )
 

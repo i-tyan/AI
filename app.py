@@ -239,19 +239,18 @@ def handle_user_input():
             print(f"Gemini's image decision: {image_gen_prompt_for_gemini}") # デバッグ用ログ
 
             # --- 3. 画像生成プロンプトが「NO_IMAGE」でなければ、マルチモーダルモデルで画像を生成 ---
-            if image_gen_prompt_for_gemini and image_gen_prompt_for_gemini != "NO_IMAGE":
-                with st.spinner("画像を生成中だよ... きらきら..."):
-                    try: # このtryブロックに注目
-                        # image_response = multi_modal_model.generate_content(  <-- この行が246行目
-                        # ↑この行の先頭のインデントを、このtryブロックの他の行と全く同じにする
+ if image_gen_prompt_for_gemini and image_gen_prompt_for_gemini != "NO_IMAGE":
+                with st.spinner("画像を生成中だよ... "):
+                    try:
+                        # ★ここを修正！generation_configを削除する★
                         image_response = multi_modal_model.generate_content(
                             [
                                 f"Generate an image based on the following description: {image_gen_prompt_for_gemini}",
                                 "" # テキストも必要な場合のために空のテキストパートを追加
-                            ],
-                            generation_config=genai.types.GenerationConfig(
-                                response_mime_type='image/jpeg' 
-                            )
+                            ]
+                            # generation_config=genai.types.GenerationConfig(  <-- この行と次の行を削除
+                            #     response_mime_type='image/jpeg' 
+                            # )
                         )
 
                         # レスポンスから画像データを抽出

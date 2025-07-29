@@ -232,7 +232,7 @@ def handle_user_input():
 
             画像生成プロンプト（またはNO_IMAGE）を教えてください:
             """
-            
+          
             # テキストモデルを使って画像生成の判断プロンプトを生成
             image_decision_response = text_model.generate_content(image_decision_prompt)
             image_gen_prompt_for_gemini = image_decision_response.text.strip()
@@ -242,21 +242,18 @@ def handle_user_input():
             if image_gen_prompt_for_gemini and image_gen_prompt_for_gemini != "NO_IMAGE":
                 with st.spinner("画像を生成中だよ... きらきら..."):
                     try:
-                        # ★ここを修正！generation_configを削除する★
+                        # ★ここを修正：generation_config 引数を削除する★
                         image_response = multi_modal_model.generate_content(
                             [
                                 f"Generate an image based on the following description: {image_gen_prompt_for_gemini}",
-                                "" # テキストも必要な場合のために空のテキストパートを追加
+                                # テキスト応答も期待する場合、空のテキストパートを追加しておくのは良いアイデア
+                                "" 
                             ]
-                            # generation_config=genai.types.GenerationConfig(  <-- この行と次の行を削除
-                            #     response_mime_type='image/jpeg' 
-                            # )
                         )
 
                         # レスポンスから画像データを抽出
                         for part in image_response.candidates[0].content.parts:
-                            # GeminiはImage.Imageオブジェクトとして画像を返すことがある
-                            if hasattr(part, 'image') and part.image: 
+                            if hasattr(part, 'image') and part.image: # `image`属性があるか確認
                                 buffered = BytesIO()
                                 part.image.save(buffered, format="JPEG") # 例としてJPEGに保存
                                 img_str = base64.b64encode(buffered.getvalue()).decode()
@@ -266,7 +263,7 @@ def handle_user_input():
                                 print(f"Generated Base64 Image Data (first 50 chars): {img_str[:50]}...") # デバッグ用ログ
                                 break # 最初の画像だけ取得
                             elif part.mime_type and part.mime_type.startswith('image/'):
-                                # Base64データが直接来る場合（古いAPIや特定の挙動）
+                                # Base64データが直接来る場合（一部の古いAPIや特定の挙動）
                                 if hasattr(part, 'data'):
                                     generated_image_url = f"data:{part.mime_type};base64,{part.data}"
                                     ai_response_parts.append({"mime_type": part.mime_type, "data": part.data})
@@ -285,7 +282,6 @@ def handle_user_input():
                 print("Gemini decided not to generate an image (or returned NO_IMAGE).")
                 generated_image_url = None
 
-
         except Exception as e:
             ai_response_parts = [f"ごめんなさい、お話の途中でエラーが出ちゃったの...: {e}"]
             st.error(ai_response_parts[0])
@@ -294,6 +290,8 @@ def handle_user_input():
 
         # AIの返答（テキストと画像が含まれる可能性あり）を履歴に追加
         st.session_state.messages.append({"role": "model", "parts": ai_response_parts})
+        
+
         
     
       # --- 生成された画像をセッションステートに保存（背景用） ---

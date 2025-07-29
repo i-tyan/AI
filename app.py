@@ -232,34 +232,34 @@ def handle_user_input():
             画像生成プロンプト（またはNO_IMAGE）を教えてください:
             """
             # テキストモデルを使って画像生成の判断プロンプトを生成
-            image_decision_response = text_model.generate_content(image_decision_prompt)
+     image_decision_response = text_model.generate_content(image_decision_prompt)
             image_gen_prompt_for_gemini = image_decision_response.text.strip()
             print(f"Gemini's image decision: {image_gen_prompt_for_gemini}") # デバッグ用ログ
+
 
             # --- 3. 画像生成プロンプトが「NO_IMAGE」でなければ、マルチモーダルモデルで画像を生成 ---
             if image_gen_prompt_for_gemini and image_gen_prompt_for_gemini != "NO_IMAGE":
                 with st.spinner("画像を生成中だよ..."):
                     try:
                         # ここが重要: プロンプトに画像生成の指示を含める
-                        # `response_mime_types` は使わない
-                        combined_prompt = [
-                            f"Generate an image based on the following description: {image_gen_prompt_for_gemini}"
-                        ]
-                        
-                        # 画像生成を含む応答を期待してマルチモーダルモデルを呼び出す
-                        # モデルがマルチモーダル出力をサポートしていれば、応答のpartsに画像が含まれる
-                        image_response = multi_modal_model.generate_content(combined_prompt)
+  # `generation_config` で応答のモダリティを指定
+                        image_response = multi_modal_model.generate_content(
+                            [
+                                f"Generate an image based on the following description: {image_gen_prompt_for_gemini}",
+                                # テキストも必要なら、空のテキストパートを追加
+                                "" 
+                            ],
+                            generation_config=genai.types.GenerationConfig(
+                                response_mime_types=['text/plain', 'image/jpeg'] # テキストと画像の両方を要求
+                            )
+                        )
 
                         # レスポンスから画像データを抽出
                         for part in image_response.candidates[0].content.parts:
                             if hasattr(part, 'image') and part.image: # `image`属性があるか確認
-                                # ImageオブジェクトからBase64データなどを取得
-                                # Streamlitのst.imageはImage.Imageオブジェクトを直接扱える場合もある
-                                # もしくは、PIL Imageに変換してBase64にする
                                 from io import BytesIO
                                 import base64
                                 # GoogleのImageオブジェクトをBase64に変換
-                                # これが最も汎用的な方法
                                 buffered = BytesIO()
                                 part.image.save(buffered, format="JPEG") # 例としてJPEGに保存
                                 img_str = base64.b64encode(buffered.getvalue()).decode()

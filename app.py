@@ -240,9 +240,10 @@ def handle_user_input():
 
             # --- 3. 画像生成プロンプトが「NO_IMAGE」でなければ、マルチモーダルモデルで画像を生成 ---
             if image_gen_prompt_for_gemini and image_gen_prompt_for_gemini != "NO_IMAGE":
-                with st.spinner("画像を生成中だよ..."):
-                         try:
-                        # ここを修正: response_mime_types を response_mime_type に変更し、単一のMIMEタイプを文字列で渡す
+                with st.spinner("画像を生成中だよ... きらきら..."):
+                    try: # このtryブロックに注目
+                        # image_response = multi_modal_model.generate_content(  <-- この行が246行目
+                        # ↑この行の先頭のインデントを、このtryブロックの他の行と全く同じにする
                         image_response = multi_modal_model.generate_content(
                             [
                                 f"Generate an image based on the following description: {image_gen_prompt_for_gemini}",

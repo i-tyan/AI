@@ -241,7 +241,7 @@ def handle_user_input():
             # --- 3. 画像生成プロンプトが「NO_IMAGE」でなければ、マルチモーダルモデルで画像を生成 ---
             if image_gen_prompt_for_gemini and image_gen_prompt_for_gemini != "NO_IMAGE":
                 with st.spinner("画像を生成中だよ..."):
-                try:
+                         try:
                         # ここを修正: response_mime_types を response_mime_type に変更し、単一のMIMEタイプを文字列で渡す
                         image_response = multi_modal_model.generate_content(
                             [
@@ -255,10 +255,8 @@ def handle_user_input():
 
                         # レスポンスから画像データを抽出
                         for part in image_response.candidates[0].content.parts:
-                            if hasattr(part, 'image') and part.image: # `image`属性があるか確認
-                                from io import BytesIO
-                                import base64
-                                # GoogleのImageオブジェクトをBase64に変換
+                            # GeminiはImage.Imageオブジェクトとして画像を返すことがある
+                            if hasattr(part, 'image') and part.image: 
                                 buffered = BytesIO()
                                 part.image.save(buffered, format="JPEG") # 例としてJPEGに保存
                                 img_str = base64.b64encode(buffered.getvalue()).decode()
@@ -267,6 +265,13 @@ def handle_user_input():
                                 ai_response_parts.append({"mime_type": "image/jpeg", "data": img_str})
                                 print(f"Generated Base64 Image Data (first 50 chars): {img_str[:50]}...") # デバッグ用ログ
                                 break # 最初の画像だけ取得
+                            elif part.mime_type and part.mime_type.startswith('image/'):
+                                # Base64データが直接来る場合（古いAPIや特定の挙動）
+                                if hasattr(part, 'data'):
+                                    generated_image_url = f"data:{part.mime_type};base64,{part.data}"
+                                    ai_response_parts.append({"mime_type": part.mime_type, "data": part.data})
+                                    print(f"Generated Raw Base64 Image Data (first 50 chars): {part.data[:50]}...")
+                                break
                         
                         if not generated_image_url:
                             print("No image data found in Gemini response from multi_modal_model.")
@@ -276,6 +281,19 @@ def handle_user_input():
                         generated_image_url = None
                         print(f"Image generation error with multi_modal_model: {img_e}") # エラーログ
 
+            else:
+                print("Gemini decided not to generate an image (or returned NO_IMAGE).")
+                generated_image_url = None
+
+        except Exception as e:
+            ai_response_parts = [f"ごめんなさい、お話の途中でエラーが出ちゃったの...: {e}"]
+            st.error(ai_response_parts[0])
+            generated_image_url = None
+            print(f"Overall AI response or image generation error: {e}") # エラーログ
+
+        # AIの返答（テキストと画像が含まれる可能性あり）を履歴に追加
+        st.session_state.messages.append({"role": "model", "parts": ai_response_parts})
+        
             else:
                 print("Gemini decided not to generate an image (or returned NO_IMAGE).")
                 generated_image_url = None

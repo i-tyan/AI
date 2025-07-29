@@ -295,10 +295,9 @@ def handle_user_input():
         # AIの返答（テキストと画像が含まれる可能性あり）を履歴に追加
         st.session_state.messages.append({"role": "model", "parts": ai_response_parts})
         
-            else:
+            else: 
                 print("Gemini decided not to generate an image (or returned NO_IMAGE).")
                 generated_image_url = None
-
         except Exception as e:
             ai_response_parts = [f"ごめんなさい、お話の途中でエラーが出ちゃったの...: {e}"]
             st.error(ai_response_parts[0])

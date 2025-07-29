@@ -22,14 +22,13 @@ except Exception as e:
     st.error(f"テキスト生成用Geminiモデルの初期化に失敗しました: {e}")
     st.stop()
 
-# 画像生成も可能なマルチモーダルモデルを指定
-# このモデルがテキストだけでなく画像を「応答の一部」として返すことを期待する
-# モデル名は 'gemini-1.5-flash' や 'gemini-1.5-pro'、またはその時点での最新の画像生成対応モデル
-# Google AI StudioのAPI呼び出し例で画像生成に対応しているモデル名を確認してください。
-# 例: 'gemini-1.5-flash' はテキストと画像を同時に生成できる可能性が高い
-MULTI_MODAL_MODEL_NAME = 'gemini-2.0-flash-preview-image-generation' # または 'gemini-1.5-pro', 'gemini-2.0-flash-preview-image-generation' など
+
+# このモデルはテキストプロンプトを与えると画像を生成して返すことを期待する。
+# エラーメッセージから 'gemini-2.0-flash-preview-image-generation' が画像対応と分かるが、
+# このモデルが generate_content に text のみを与えて image を返す挙動を本当にするかは要検証。
+# もしこれで動かない場合、Vertex AIのimagegenerationモデルへの切り替えも検討。
+MULTI_MODAL_MODEL_NAME = 'gemini-2.0-flash-preview-image-generation' # エラーメッセージに合わせる
 try:
-    # マルチモーダルモデルは、安全性設定を調整することも可能
     multi_modal_model = genai.GenerativeModel(
         model_name=MULTI_MODAL_MODEL_NAME,
         safety_settings={
@@ -42,6 +41,7 @@ try:
 except Exception as e:
     st.error(f"マルチモーダルGeminiモデルの初期化に失敗しました: {e}")
     st.stop()
+
 
 # --- 3. AIの性格プリセットの定義 ---
 PERSONALITY_PRESETS = {
@@ -173,8 +173,7 @@ for message in st.session_state.messages:
                         st.image(f"data:{part['mime_type']};base64,{part['data']}", caption="AIが生成したイメージだよ！")
                     elif 'file_uri' in part:
                         st.image(part['file_uri'], caption="AIが生成したイメージだよ！")
-                    # ここに他の形式の画像データ対応を追加できる
-                
+                    
 # --- ユーザー入力とAI応答処理を関数にまとめる ---
 def handle_user_input():
     user_input = st.session_state.user_chat_input_key
@@ -184,7 +183,6 @@ def handle_user_input():
         st.session_state.messages.append({"role": "user", "parts": [user_input]})
         
         # Geminiに渡す履歴は、テキストのみにするか、対応する形式に合わせる
-        # ここでは画像パートを省略し、テキストのみを履歴として渡す（画像生成判断時も同様）
         chat_history_for_gemini = []
         for msg in st.session_state.messages:
             text_parts = []
@@ -201,7 +199,6 @@ def handle_user_input():
 
         try:
             # --- 1. まず通常のテキスト応答を生成 ---
-            # ここではテキスト生成モデルを使用
             chat_session = text_model.start_chat(history=chat_history_for_gemini[:-1])
             with st.spinner("キャラクターが考えてるよ..."):
                 response = chat_session.send_message(user_input)
@@ -210,7 +207,7 @@ def handle_user_input():
                 print(f"AI Text Response: {ai_response_text}") # デバッグ用ログ
 
             # --- 2. 画像生成が必要かGeminiに判断させるプロンプトを生成 ---
-            # 会話の最新の部分と、全体の流れを考慮させる
+            # ここではテキストモデルを使用。画像生成は別途マルチモーダルモデルで行う。
             image_decision_prompt = f"""
             これまでの会話の文脈を考慮し、もし会話の内容が以下のような、具体的で視覚的な表現を必要とする描写（例: 風景、物体、キャラクター、抽象的な概念の具現化など）を含んでおり、画像を生成することで会話が豊かになると判断できる場合、その描写に最も適した英語の画像生成プロンプトを簡潔に生成してください。
             もし画像を生成する必要がないと判断した場合は、「NO_IMAGE」とだけ返してください。
@@ -232,8 +229,7 @@ def handle_user_input():
 
             画像生成プロンプト（またはNO_IMAGE）を教えてください:
             """
-          
-            # テキストモデルを使って画像生成の判断プロンプトを生成
+            
             image_decision_response = text_model.generate_content(image_decision_prompt)
             image_gen_prompt_for_gemini = image_decision_response.text.strip()
             print(f"Gemini's image decision: {image_gen_prompt_for_gemini}") # デバッグ用ログ
@@ -242,13 +238,15 @@ def handle_user_input():
             if image_gen_prompt_for_gemini and image_gen_prompt_for_gemini != "NO_IMAGE":
                 with st.spinner("画像を生成中だよ... きらきら..."):
                     try:
-                        # ★ここを修正：generation_config 引数を削除する★
+                        # ここが今回の修正の肝！
+                        # multi_modal_model には画像生成プロンプト（テキスト）だけを渡す
+                        # そして、応答の 'parts' に画像が含まれることを期待する
                         image_response = multi_modal_model.generate_content(
-                            [
-                                f"Generate an image based on the following description: {image_gen_prompt_for_gemini}",
-                                # テキスト応答も期待する場合、空のテキストパートを追加しておくのは良いアイデア
-                                "" 
-                            ]
+                            # 画像生成プロンプトのみを渡す
+                            # モデルが自動的に画像とテキストの混合応答を生成することを期待
+                            # Vertex AIのimagegenerationモデルのように、明示的にresponse_mime_typeを指定しない
+                            # ただし、モデルが純粋なテキストプロンプトから画像を生成する能力を持つ必要がある
+                            f"Generate an image based on the following description: {image_gen_prompt_for_gemini}"
                         )
 
                         # レスポンスから画像データを抽出

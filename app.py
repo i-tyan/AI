@@ -31,10 +31,10 @@ try:
     multi_modal_model = genai.GenerativeModel(
         model_name=MULTI_MODAL_MODEL_NAME,
         safety_settings={
-            genai.types.HarmCategory.HARM_CATEGORY_HATE_SPEECH: genai.types.HarmBlockThreshold.BLOCK_NONE,
-            genai.types.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: genai.types.HarmBlockThreshold.BLOCK_NONE,
-            genai.types.HarmCategory.HARM_CATEGORY_HARASSMENT: genai.types.HarmBlockThreshold.BLOCK_NONE,
-            genai.types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: genai.types.HarmBlockThreshold.BLOCK_NONE,
+            genai.type.HarmCategory.HARM_CATEGORY_HATE_SPEECH: genai.type.HarmBlockThreshold.BLOCK_NONE,
+            genai.type.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: genai.type.HarmBlockThreshold.BLOCK_NONE,
+            genai.type.HarmCategory.HARM_CATEGORY_HARASSMENT: genai.type.HarmBlockThreshold.BLOCK_NONE,
+            genai.type.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: genai.type.HarmBlockThreshold.BLOCK_NONE,
         }
     )
 except Exception as e:
@@ -248,8 +248,8 @@ def handle_user_input():
                                 # テキストも必要なら、空のテキストパートを追加
                                 "" 
                             ],
-                            generation_config=genai.types.GenerationConfig(
-                                response_mime_types=['text/plain', 'image/jpeg'] # テキストと画像の両方を要求
+                            generation_config=genai.type.GenerationConfig(
+                                response_mime_type=['text/plain', 'image/jpeg'] # テキストと画像の両方を要求
                             )
                         )
 

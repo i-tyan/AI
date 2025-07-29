@@ -210,27 +210,7 @@ def handle_user_input():
 
             # --- 2. 画像生成が必要かGeminiに判断させるプロンプトを生成 ---
             # 会話の最新の部分と、全体の流れを考慮させる
-            image_decision_prompt = f"""
-            これまでの会話の文脈を考慮し、もし会話の内容が以下のような、具体的で視覚的な表現を必要とする描写（例: 風景、物体、キャラクター、抽象的な概念の具現化など）を含んでおり、画像を生成することで会話が豊かになると判断できる場合、その描写に最も適した英語の画像生成プロンプトを簡潔に生成してください。
-            もし画像を生成する必要がないと判断した場合は、「NO_IMAGE」とだけ返してください。
-
-            例1:
-            会話: 「昨日、すごくきれいな夕焼けを見たんだ。空が赤くて、雲がピンク色だったよ。」
-            Geminiの返答: "A beautiful sunset with a red sky and pink clouds over a calm ocean."
-
-            例2:
-            会話: 「妖精さんがお花畑で踊っている絵が見たいな。」
-            Geminiの返答: "A small, cute fairy dancing happily in a vibrant field of wildflowers."
-
-            例3:
-            会話: 「今日は気分がいいね。」
-            Geminiの返答: "NO_IMAGE"
-
-            最新のユーザーメッセージ: "{user_input}"
-            これまでの会話の要約（最新のAI応答含む）：{ai_response_text[:100]}...
-
-            画像生成プロンプト（またはNO_IMAGE）を教えてください:
-            """
+            image_decision_prompt = "これまでの会話の文脈を考慮し、もし会話の内容が以下のような、具体的で視覚的な表現を必要とする描写（例: 風景、物体、キャラクター、抽象的な概念の具現化など）を含んでおり、画像を生成することで会話が豊かになると判断できる場合、その描写に最も適した英語の画像生成プロンプトを簡潔に生成してください。もし画像を生成する必要がないと判断した場合は、「NO_IMAGE」とだけ返してください。最新のユーザーメッセージ: "{user_input}"これまでの会話の要約（最新のAI応答含む）：{ai_response_text[:100]}...画像生成プロンプト（またはNO_IMAGE）を教えてください"
             
             # テキストモデルを使って画像生成の判断プロンプトを生成
             image_decision_response = text_model.generate_content(image_decision_prompt)

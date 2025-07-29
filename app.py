@@ -127,7 +127,6 @@ PERSONALITY_PRESETS = {
 st.image("Gemini_Generated_Image_qotgqqotgqqotgqq (1).png")
 st.write("好きなキャラクターを選んで、話そう！キャラクターを変えると履歴がぱーになるので注意！なんか違くても気にしない！会話を保存するときは、AIに会話を終了或いは保存する旨を伝えよう！")
 
-
 # サイドバーにAIの性格選択UIを配置
 st.sidebar.header("AIの性格を選ぶ")
 selected_preset_name = st.sidebar.radio(
@@ -138,7 +137,7 @@ selected_preset_name = st.sidebar.radio(
 selected_preset_data = PERSONALITY_PRESETS[selected_preset_name]
 current_personality_prompt = selected_preset_data["prompt"]
 current_initial_response = selected_preset_data["initial_response_template"]
-
+current_question_prompt = selected_preset_data["question_prompt"]
 
 
 # セッションステートで会話履歴と現在の性格プロンプトを管理
@@ -223,7 +222,7 @@ def handle_user_input():
             Geminiの返答: "A small, cute fairy dancing happily in a vibrant field of wildflowers."
 
             例3:
-            会話: 「今日は気分がいいね。」
+            会話: 「今日の天気は晴れで、気分がいいね。」
             Geminiの返答: "NO_IMAGE"
 
             最新のユーザーメッセージ: "{user_input}"
@@ -231,18 +230,18 @@ def handle_user_input():
 
             画像生成プロンプト（またはNO_IMAGE）を教えてください:
             """
+            
             # テキストモデルを使って画像生成の判断プロンプトを生成
-     image_decision_response = text_model.generate_content(image_decision_prompt)
+            image_decision_response = text_model.generate_content(image_decision_prompt)
             image_gen_prompt_for_gemini = image_decision_response.text.strip()
             print(f"Gemini's image decision: {image_gen_prompt_for_gemini}") # デバッグ用ログ
 
-
             # --- 3. 画像生成プロンプトが「NO_IMAGE」でなければ、マルチモーダルモデルで画像を生成 ---
-        if image_gen_prompt_for_gemini and image_gen_prompt_for_gemini != "NO_IMAGE":
-                with st.spinner("画像を生成中だよ..."):
+            if image_gen_prompt_for_gemini and image_gen_prompt_for_gemini != "NO_IMAGE":
+                with st.spinner("画像を生成中だよ... きらきら..."):
                     try:
                         # ここが重要: プロンプトに画像生成の指示を含める
-  # `generation_config` で応答のモダリティを指定
+                        # `generation_config` で応答のモダリティを指定
                         image_response = multi_modal_model.generate_content(
                             [
                                 f"Generate an image based on the following description: {image_gen_prompt_for_gemini}",
@@ -290,9 +289,7 @@ def handle_user_input():
         # AIの返答（テキストと画像が含まれる可能性あり）を履歴に追加
         st.session_state.messages.append({"role": "model", "parts": ai_response_parts})
         
-       
-
-        # --- 生成された画像をセッションステートに保存（背景用） ---
+      # --- 生成された画像をセッションステートに保存（背景用） ---
         st.session_state.last_generated_image_url = generated_image_url
 
 # ユーザーからの入力を受け取る部分

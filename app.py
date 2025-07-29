@@ -247,11 +247,11 @@ def handle_user_input():
                             [
                                 f"Generate an image based on the following description: {image_gen_prompt_for_gemini}",
                                 "" # テキストも必要な場合のために空のテキストパートを追加
-                            ],
+                            ],)
                             generation_config=genai.types.GenerationConfig(
                                 response_mime_type='image/jpeg' # ★ここを修正！単数形にして文字列で渡す★
                             )
-                        )
+                        
 
                         # レスポンスから画像データを抽出
                         for part in image_response.candidates[0].content.parts:

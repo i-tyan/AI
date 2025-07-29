@@ -238,7 +238,7 @@ def handle_user_input():
 
 
             # --- 3. 画像生成プロンプトが「NO_IMAGE」でなければ、マルチモーダルモデルで画像を生成 ---
-            if image_gen_prompt_for_gemini and image_gen_prompt_for_gemini != "NO_IMAGE":
+        if image_gen_prompt_for_gemini and image_gen_prompt_for_gemini != "NO_IMAGE":
                 with st.spinner("画像を生成中だよ..."):
                     try:
                         # ここが重要: プロンプトに画像生成の指示を含める

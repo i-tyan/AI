@@ -28,7 +28,7 @@ except Exception as e:
 # エラーメッセージから 'gemini-2.0-flash-preview-image-generation' が画像対応と分かるが、
 # このモデルが generate_content に text のみを与えて image を返す挙動を本当にするかは要検証。
 # もしこれで動かない場合、Vertex AIのimagegenerationモデルへの切り替えも検討。
-MULTI_MODAL_MODEL_NAME = 'gemini-2.0-flash-preview-image-generation' # エラーメッセージに合わせる
+MULTI_MODAL_MODEL_NAME = 'gemini-2.5-pro' # エラーメッセージに合わせる
 try:
     multi_modal_model = genai.GenerativeModel(
         model_name=MULTI_MODAL_MODEL_NAME,

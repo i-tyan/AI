@@ -1,7 +1,7 @@
 import streamlit as st
 import google.generativeai as genai
 import os
-from PIL import Image # Pillowライブラリのインポートを追加
+from PIL import Image # Pillowライブラリのインポートは引き続き必要
 from io import BytesIO
 import base64
 
@@ -16,7 +16,7 @@ genai.configure(api_key=api_key)
 
 # --- 2. Geminiモデルの初期化 ---
 # テキスト生成用のモデル
-TEXT_MODEL_NAME = 'gemini-2.5-flash' 
+TEXT_MODEL_NAME = 'gemini-1.0-pro' 
 try:
     text_model = genai.GenerativeModel(TEXT_MODEL_NAME)
 except Exception as e:
@@ -24,8 +24,8 @@ except Exception as e:
     st.stop()
 
 # 画像生成も可能なマルチモーダルモデルを指定
-# モデル名は時期によって変わる可能性があるので、最新の公式ドキュメントで確認を推奨
-MULTI_MODAL_MODEL_NAME = 'gemini-2.0-flash' # エラーメッセージに合わせる
+# 今回は 'gemini-2.0-flash' を試しているとのことなので、それに合わせる
+MULTI_MODAL_MODEL_NAME = 'gemini-2.0-flash' # ここを 'gemini-2.0-flash' に変更
 try:
     multi_modal_model = genai.GenerativeModel(
         model_name=MULTI_MODAL_MODEL_NAME,
@@ -138,7 +138,7 @@ selected_preset_name = st.sidebar.radio(
 selected_preset_data = PERSONALITY_PRESETS[selected_preset_name]
 current_personality_prompt = selected_preset_data["prompt"]
 current_initial_response = selected_preset_data["initial_response_template"]
-
+current_question_prompt = selected_preset_data["question_prompt"]
 
 
 # セッションステートで会話履歴と現在の性格プロンプトを管理
@@ -166,12 +166,18 @@ for message in st.session_state.messages:
             for part in message["parts"]:
                 if isinstance(part, str): # テキストの場合
                     st.write(part)
-                elif isinstance(part, dict) and part.get('mime_type', '').startswith('image/'): # 画像の場合
-                    # Geminiはbase64で画像を返すことが多いので、直接st.imageで表示できるように調整
-                    if 'data' in part:
-                        st.image(f"data:{part['mime_type']};base64,{part['data']}", caption="AIが生成したイメージだよ！")
-                    elif 'file_uri' in part:
-                        st.image(part['file_uri'], caption="AIが生成したイメージだよ！")
+                # ★ここを修正：genai.types.Blob をチェックする★
+                elif isinstance(part, genai.types.Blob) and part.mime_type.startswith('image/'): # 画像の場合
+                    # GeminiはBlobオブジェクトとして画像を返す
+                    if part.data: # Blobオブジェクトのdata属性はバイト列
+                        img_str = base64.b64encode(part.data).decode()
+                        st.image(f"data:{part.mime_type};base64,{img_str}", caption="AIが生成したイメージだよ！")
+                    # genai.types.Image.Image の場合も考慮 (以前のバージョンなど)
+                    elif hasattr(part, 'image') and isinstance(part.image, Image.Image):
+                        buffered = BytesIO()
+                        part.image.save(buffered, format="JPEG") # 例としてJPEGに保存
+                        img_str = base64.b64encode(buffered.getvalue()).decode()
+                        st.image(f"data:image/jpeg;base64,{img_str}", caption="AIが生成したイメージだよ！")
                     
 # --- ユーザー入力とAI応答処理を関数にまとめる ---
 def handle_user_input():
@@ -206,26 +212,11 @@ def handle_user_input():
                 print(f"AI Text Response: {ai_response_text}") # デバッグ用ログ
 
             # --- 2. 画像生成が必要かGeminiに判断させるプロンプトを生成 ---
+            # この部分のプロンプトをより簡潔に、かつ画像生成を直接促すように変更
             image_decision_prompt = f"""
-            これまでの会話の文脈を考慮し、もし会話の内容が以下のような、具体的で視覚的な表現を必要とする描写（例: 風景、物体、キャラクター、抽象的な概念の具現化など）を含んでおり、画像を生成することで会話が豊かになると判断できる場合、その描写に最も適した英語の画像生成プロンプトを簡潔に生成してください。
-            もし画像を生成する必要がないと判断した場合は、「NO_IMAGE」とだけ返してください。
-
-            例1:
-            会話: 「昨日、すごくきれいな夕焼けを見たんだ。空が赤くて、雲がピンク色だったよ。」
-            Geminiの返答: "A beautiful sunset with a red sky and pink clouds over a calm ocean."
-
-            例2:
-            会話: 「妖精さんがお花畑で踊っている絵が見たいな。」
-            Geminiの返答: "A small, cute fairy dancing happily in a vibrant field of wildflowers."
-
-            例3:
-            会話: 「今日の天気は晴れで、気分がいいね。」
-            Geminiの返答: "NO_IMAGE"
-
-            最新のユーザーメッセージ: "{user_input}"
-            これまでの会話の要約（最新のAI応答含む）：{ai_response_text[:100]}...
-
-            画像生成プロンプト（またはNO_IMAGE）を教えてください:
+            ユーザーのメッセージを基に、もし具体的な画像を生成するのに適していると判断した場合、その画像を生成するための英語のプロンプト（最大50単語）を簡潔に生成してください。例えば、「A beautiful sunset with red and pink clouds.」のように。
+            画像生成が不要な場合は、「NO_IMAGE」とだけ返してください。
+            ユーザーメッセージ: "{user_input}"
             """
             
             # テキストモデルを使って画像生成の判断プロンプトを生成
@@ -235,34 +226,43 @@ def handle_user_input():
 
             # --- 3. 画像生成プロンプトが「NO_IMAGE」でなければ、マルチモーダルモデルで画像を生成 ---
             if image_gen_prompt_for_gemini and image_gen_prompt_for_gemini != "NO_IMAGE":
-                with st.spinner("画像を生成中だよ... きらきら..."):
+                with st.spinner("画像を生成中だよ... "):
                     try:
-                        # ★ここを修正：generation_config 引数を完全に削除し、プロンプトを単一の文字列にする★
+                        # ここではプロンプトを文字列一つに絞る。
+                        # モデルがマルチモーダルなら、テキストと画像の組み合わせを自動で返すことを期待
                         image_response = multi_modal_model.generate_content(
                             f"Generate an image based on the following description: {image_gen_prompt_for_gemini}"
                         )
 
-                        # レスポンスから画像データを抽出
+                        # レスポンスから画像データとテキストデータを抽出
                         for part in image_response.candidates[0].content.parts:
-                            if hasattr(part, 'image') and part.image: # `image`属性があるか確認
+                            if hasattr(part, 'text'): # テキストパート
+                                # AIが画像生成と同時に何かテキストを返す場合
+                                if part.text.strip(): # 空でなければ追加
+                                    ai_response_parts.append(part.text)
+                                    print(f"AI Image-related Text Response: {part.text[:50]}...")
+                            # ★ここを修正：genai.types.Blob をチェックする★
+                            elif isinstance(part, genai.types.Blob) and part.mime_type.startswith('image/'):
+                                # Blobオブジェクトのdataはバイト列なので直接base64エンコード
+                                img_str = base64.b64encode(part.data).decode()
+                                generated_image_url = f"data:{part.mime_type};base64,{img_str}"
+                                ai_response_parts.append({"mime_type": part.mime_type, "data": img_str})
+                                print(f"Generated Base64 Image Data (first 50 chars): {img_str[:50]}...")
+                                # 一度画像が生成されたら、ループを抜ける（最初の画像のみ処理）
+                                # break # 複数のパーツがある場合、テキストも取得するためbreakはコメントアウト
+                            # genai.types.Image.Image の場合も考慮 (以前のバージョンやAPIの挙動によってはこれも来る)
+                            elif hasattr(part, 'image') and isinstance(part.image, Image.Image):
                                 buffered = BytesIO()
-                                part.image.save(buffered, format="JPEG") # 例としてJPEGに保存
+                                part.image.save(buffered, format="JPEG")
                                 img_str = base64.b64encode(buffered.getvalue()).decode()
-                                
                                 generated_image_url = f"data:image/jpeg;base64,{img_str}"
                                 ai_response_parts.append({"mime_type": "image/jpeg", "data": img_str})
-                                print(f"Generated Base64 Image Data (first 50 chars): {img_str[:50]}...") # デバッグ用ログ
-                                break # 最初の画像だけ取得
-                            elif part.mime_type and part.mime_type.startswith('image/'):
-                                # Base64データが直接来る場合（一部の古いAPIや特定の挙動）
-                                if hasattr(part, 'data'):
-                                    generated_image_url = f"data:{part.mime_type};base64,{part.data}"
-                                    ai_response_parts.append({"mime_type": part.mime_type, "data": part.data})
-                                    print(f"Generated Raw Base64 Image Data (first 50 chars): {part.data[:50]}...")
-                                break
+                                print(f"Generated PIL Image Data (first 50 chars): {img_str[:50]}...")
+                                # break # 複数のパーツがある場合、テキストも取得するためbreakはコメントアウト
                         
-                        if not generated_image_url:
-                            print("No image data found in Gemini response from multi_modal_model.")
+                        if not generated_image_url and not any(isinstance(p, str) for p in ai_response_parts):
+                            # 画像もテキストも生成されなかった場合
+                            ai_response_parts.append("ごめんなさい、うまく画像を生成できなかったみたい...テキスト応答もなかったよ。")
 
                     except Exception as img_e:
                         st.warning(f"画像生成に失敗したもん... {img_e}")
@@ -282,10 +282,22 @@ def handle_user_input():
         # AIの返答（テキストと画像が含まれる可能性あり）を履歴に追加
         st.session_state.messages.append({"role": "model", "parts": ai_response_parts})
         
-   
+        # --- AIが質問を生成する部分 ---
+        question_history_for_gemini_q = chat_history_for_gemini.copy() 
+        question_history_for_gemini_q.append({"role": "user", "parts": [{"text": current_question_prompt}]})
 
+        try:
+            question_session = text_model.start_chat(history=question_history_for_gemini_q[:-1])
+            with st.spinner("キャラクターが質問を考えてるよ..."):
+                question_response = question_session.send_message(current_question_prompt)
+                ai_question = question_response.text
+                print(f"AI Question: {ai_question}") # デバッグ用ログ
 
-     
+            st.session_state.messages.append({"role": "model", "parts": [ai_question]})
+        except Exception as q_e:
+            st.warning(f"質問の生成中にエラーが出ちゃったの... {q_e}")
+            st.session_state.messages.append({"role": "model", "parts": ["ごめんね、質問が思いつかないんだ…"]})
+            print(f"Question generation error: {q_e}") # エラーログ
 
         # --- 生成された画像をセッションステートに保存（背景用） ---
         st.session_state.last_generated_image_url = generated_image_url

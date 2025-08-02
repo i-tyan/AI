@@ -16,7 +16,7 @@ genai.configure(api_key=api_key)
 
 # --- 2. Geminiモデルの初期化 ---
 # テキスト生成用のモデル
-TEXT_MODEL_NAME = 'gemini-1.0-pro' 
+TEXT_MODEL_NAME = 'gemini-2.5-flash' 
 try:
     text_model = genai.GenerativeModel(TEXT_MODEL_NAME)
 except Exception as e:

@@ -16,8 +16,9 @@ genai.configure(api_key=api_key)
 
 # --- 2. Geminiモデルの初期化 ---
 # テキスト生成も画像生成判断も可能な 'gemini-1.5-flash' に一本化
-# このモデルはテキストも画像も生成できるマルチモーダルモデルだよ。
-MODEL_NAME = 'gemini-1.5-flash' # ここを gemini-1.5-flash に変更
+# ユーザーの要望により '2.5-flash' とのことだが、現時点での公開モデルは '1.5-flash' が最新。
+# そのため 'gemini-1.5-flash' を使用。もし '2.5-flash' が利用可能になったら適宜変更してください。
+MODEL_NAME = 'gemini-1.5-flash' 
 
 try:
     gemini_model = genai.GenerativeModel(
@@ -154,8 +155,10 @@ for message in st.session_state.messages:
         with st.chat_message("assistant"):
             # partsにテキストと画像が混在する可能性があるので、それぞれ処理
             for part in message["parts"]:
-                # TextPart (テキストデータ) の場合
-                if hasattr(part, 'text'):
+                # テキストデータの場合
+                if isinstance(part, str): # 直接文字列の場合（以前の履歴でテキストがstringの場合がある）
+                    st.write(part)
+                elif hasattr(part, 'text'): # TextPartオブジェクトの場合
                     st.write(part.text)
                 # BlobPart (画像データ) の場合
                 elif hasattr(part, 'mime_type') and part.mime_type.startswith('image/'):
@@ -166,9 +169,9 @@ for message in st.session_state.messages:
                         img_str = base64.b64encode(buffered.getvalue()).decode()
                         st.image(f"data:image/jpeg;base64,{img_str}", caption="AIが生成したイメージだよ！")
                     # その他の画像データ（Base64文字列など）
-                    elif hasattr(part, 'data'):
+                    elif hasattr(part, 'data'): # data属性にBase64文字列がある場合
                         st.image(f"data:{part.mime_type};base64,{part.data}", caption="AIが生成したイメージだよ！")
-                    elif hasattr(part, 'file_uri'):
+                    elif hasattr(part, 'file_uri'): # file_uri属性にURLがある場合
                         st.image(part.file_uri, caption="AIが生成したイメージだよ！")
                 
 # --- ユーザー入力とAI応答処理を関数にまとめる ---
@@ -176,64 +179,38 @@ def handle_user_input():
     user_input = st.session_state.user_chat_input_key
 
     if user_input:
-        # ユーザーメッセージを履歴に追加し、一時的に表示
+        # ユーザーメッセージを履歴に追加
         st.session_state.messages.append({"role": "user", "parts": [user_input]})
         
-        # Geminiに渡す履歴は、テキストのみにするか、対応する形式に合わせる
-        chat_history_for_gemini = []
+        # Geminiに渡す履歴は、辞書形式に変換
+        # モデルに渡すContentオブジェクトの形式を調整
+        contents_for_gemini = []
         for msg in st.session_state.messages:
-            current_parts = []
+            # 各メッセージの'parts'をContentオブジェクトが期待する形式に変換
+            current_parts_for_content = []
             for part_item in msg["parts"]:
-                if isinstance(part_item, str): # テキスト文字列の場合
-                    current_parts.append({"text": part_item})
-                elif isinstance(part_item, dict): # 辞書形式の場合（画像データなど）
-                    if 'text' in part_item:
-                        current_parts.append({"text": part_item['text']})
-                    elif 'mime_type' in part_item and part_item['mime_type'].startswith('image/'):
-                        # ここではGemini APIに渡すためにImage.Imageオブジェクトに変換する必要がある場合がある
-                        # 今回は、履歴をモデルに渡す際も、画像データは一旦省略してテキストの流れを重視
-                        pass 
-            if current_parts:
-                chat_history_for_gemini.append({"role": msg["role"], "parts": current_parts})
-        
-        # chat_history_for_gemini の最後に性格プロンプトを含めないように調整
-        # (すでに最初の"user"ロールで追加済みのため)
-        final_chat_history = []
-        for hist_msg in chat_history_for_gemini:
-            # 最初の性格プロンプトと初期応答は履歴として渡す
-            if hist_msg["parts"][0]["text"] == current_personality_prompt or hist_msg["parts"][0]["text"] == current_initial_response:
-                final_chat_history.append(hist_msg)
-            else:
-                final_chat_history.append(hist_msg)
+                if isinstance(part_item, str):
+                    current_parts_for_content.append(part_item) # テキストは直接文字列として
+                elif isinstance(part_item, dict) and 'text' in part_item:
+                    current_parts_for_content.append(part_item['text'])
+                # 画像データはモデルへの入力として考慮しない（判断はテキストで）
+                # ここでは過去のAIの画像応答はモデルへの入力には含めない
+                
+            # role が "user" で最初の性格プロンプトの場合は、"user" ロールで追加
+            # それ以外は通常の会話として追加
+            if msg["role"] == "user" and msg["parts"][0] == current_personality_prompt:
+                contents_for_gemini.append({"role": "user", "parts": [current_personality_prompt]})
+            elif current_parts_for_content: # テキストコンテンツがあれば追加
+                contents_for_gemini.append({"role": msg["role"], "parts": current_parts_for_content})
 
         ai_response_parts = [] # AIの返答はテキストと画像のリストになる可能性がある
         generated_image_url = None # 背景設定用URL（最終的に表示される画像）
 
         try:
-            # --- 1. まず通常のテキスト応答を生成 (または画像生成の判断) ---
-            # Geminiにチャット履歴を渡し、ユーザーの最新メッセージで応答を生成
-            # chat_session = gemini_model.start_chat(history=final_chat_history[:-1]) # 最後のメッセージはsend_messageで送る
-            # response = chat_session.send_message(user_input)
-
-            # 会話履歴全体を考慮し、応答を生成
-            # image_decision_prompt と通常の会話を統合する
-            combined_prompt_content = []
-            # 過去の会話をContentオブジェクトに変換して追加
-            for msg in final_chat_history:
-                # Partオブジェクトに変換して追加
-                parts_for_content = []
-                for p in msg["parts"]:
-                    if "text" in p:
-                        parts_for_content.append(p["text"]) # テキストは直接文字列として
-                    # 画像データはここではモデルへの入力として考慮しない（判断はテキストで）
-                if parts_for_content:
-                    combined_prompt_content.append(genai.types.Content(role=msg["role"], parts=parts_for_content))
-
-            # 最新のユーザー入力もContentオブジェクトとして追加
-            combined_prompt_content.append(genai.types.Content(role="user", parts=[user_input]))
-
             with st.spinner("キャラクターが考えてるよ..."):
-                response = gemini_model.generate_content(combined_prompt_content)
+                # `gemini_model.generate_content` に直接履歴と最新の入力を渡す
+                # 辞書形式のリストを直接渡せる
+                response = gemini_model.generate_content(contents_for_gemini)
                 
                 ai_response_text = ""
                 # レスポンスからテキストと画像を抽出

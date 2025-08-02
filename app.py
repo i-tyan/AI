@@ -284,11 +284,8 @@ def handle_user_input():
         
    
 
-        st.session_state.messages.append({"role": "model", "parts": [ai_question]})
-        except Exception as q_e:
-            st.warning(f"質問の生成中にエラーが出ちゃったの... {q_e}")
-            st.session_state.messages.append({"role": "model", "parts": ["ごめんね、質問が思いつかないんだ…"]})
-            print(f"Question generation error: {q_e}") # エラーログ
+
+     
 
         # --- 生成された画像をセッションステートに保存（背景用） ---
         st.session_state.last_generated_image_url = generated_image_url

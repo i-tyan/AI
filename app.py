@@ -18,7 +18,7 @@ genai.configure(api_key=api_key)
 # テキスト生成も画像生成判断も可能な 'gemini-1.5-flash' に一本化
 # ユーザーの要望により '2.5-flash' とのことだが、現時点での公開モデルは '1.5-flash' が最新。
 # そのため 'gemini-1.5-flash' を使用。もし '2.5-flash' が利用可能になったら適宜変更してください。
-MODEL_NAME = 'gemini-1.5-flash' 
+MODEL_NAME = 'gemini-2.5-flash' 
 
 try:
     gemini_model = genai.GenerativeModel(

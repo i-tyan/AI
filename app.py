@@ -284,7 +284,7 @@ def handle_user_input():
         
    
 
-            st.session_state.messages.append({"role": "model", "parts": [ai_question]})
+        st.session_state.messages.append({"role": "model", "parts": [ai_question]})
         except Exception as q_e:
             st.warning(f"質問の生成中にエラーが出ちゃったの... {q_e}")
             st.session_state.messages.append({"role": "model", "parts": ["ごめんね、質問が思いつかないんだ…"]})

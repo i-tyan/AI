@@ -1,9 +1,10 @@
 import streamlit as st
 import google.generativeai as genai
 import os
-from PIL import Image # Pillowライブラリのインポートを追加
+from PIL import Image
 from io import BytesIO
 import base64
+
 # --- 1. Google Gemini APIキーの設定 ---
 try:
     api_key = st.secrets["GOOGLE_API_KEY"]
@@ -14,15 +15,15 @@ except KeyError:
 genai.configure(api_key=api_key)
 
 # --- 2. Geminiモデルの初期化 ---
-# テキスト生成用のモデル
-TEXT_MODEL_NAME = 'gemini-2.5-flash' # 基本的なテキスト応答と画像生成判断用
+# テキスト生成用のモデル (会話のテキスト応答と画像生成の判断に使用)
+TEXT_MODEL_NAME = 'gemini-2.5-flash' 
 try:
     text_model = genai.GenerativeModel(TEXT_MODEL_NAME)
 except Exception as e:
     st.error(f"テキスト生成用Geminiモデルの初期化に失敗しました: {e}")
     st.stop()
 
-
+# 画像生成も可能なマルチモーダルモデルを指定
 # このモデルはテキストプロンプトを与えると画像を生成して返すことを期待する。
 # エラーメッセージから 'gemini-2.0-flash-preview-image-generation' が画像対応と分かるが、
 # このモデルが generate_content に text のみを与えて image を返す挙動を本当にするかは要検証。
@@ -114,7 +115,7 @@ PERSONALITY_PRESETS = {
         "initial_response_template": ""},
      
      "偽MBTI診断": {
-        "prompt": "あなたはユーザーのMBTIを当てるために質問をしてください。",
+        "prompt": "あなたはユーザーのMBTIを当てるために質問をしてください。選択肢は1~5で",
         "initial_response_template": ""},
     
  "プロンプトをいじれる人はキャラを作ってみよう！": {
@@ -128,6 +129,7 @@ PERSONALITY_PRESETS = {
 
 st.image("Gemini_Generated_Image_qotgqqotgqqotgqq (1).png")
 st.write("好きなキャラクターを選んで、話そう！キャラクターを変えると履歴がぱーになるので注意！なんか違くても気にしない！会話を保存するときは、AIに会話を終了或いは保存する旨を伝えよう！")
+
 
 # サイドバーにAIの性格選択UIを配置
 st.sidebar.header("AIの性格を選ぶ")
@@ -236,7 +238,7 @@ def handle_user_input():
 
             # --- 3. 画像生成プロンプトが「NO_IMAGE」でなければ、マルチモーダルモデルで画像を生成 ---
             if image_gen_prompt_for_gemini and image_gen_prompt_for_gemini != "NO_IMAGE":
-                with st.spinner("画像を生成中だよ... きらきら..."):
+                with st.spinner("画像を生成中だよ... "):
                     try:
                         # ここが今回の修正の肝！
                         # multi_modal_model には画像生成プロンプト（テキスト）だけを渡す
@@ -259,6 +261,9 @@ def handle_user_input():
                                 generated_image_url = f"data:image/jpeg;base64,{img_str}"
                                 ai_response_parts.append({"mime_type": "image/jpeg", "data": img_str})
                                 print(f"Generated Base64 Image Data (first 50 chars): {img_str[:50]}...") # デバッグ用ログ
+                                # テキストパートも同時に返される場合があるため、テキストも抽出
+                                if hasattr(part, 'text'):
+                                    ai_response_parts.append(part.text)
                                 break # 最初の画像だけ取得
                             elif part.mime_type and part.mime_type.startswith('image/'):
                                 # Base64データが直接来る場合（一部の古いAPIや特定の挙動）
@@ -266,6 +271,9 @@ def handle_user_input():
                                     generated_image_url = f"data:{part.mime_type};base64,{part.data}"
                                     ai_response_parts.append({"mime_type": part.mime_type, "data": part.data})
                                     print(f"Generated Raw Base64 Image Data (first 50 chars): {part.data[:50]}...")
+                                # テキストパートも同時に返される場合があるため、テキストも抽出
+                                if hasattr(part, 'text'):
+                                    ai_response_parts.append(part.text)
                                 break
                         
                         if not generated_image_url:
@@ -289,10 +297,9 @@ def handle_user_input():
         # AIの返答（テキストと画像が含まれる可能性あり）を履歴に追加
         st.session_state.messages.append({"role": "model", "parts": ai_response_parts})
         
+       
 
-        
-    
-      # --- 生成された画像をセッションステートに保存（背景用） ---
+        # --- 生成された画像をセッションステートに保存（背景用） ---
         st.session_state.last_generated_image_url = generated_image_url
 
 # ユーザーからの入力を受け取る部分
@@ -302,7 +309,6 @@ st.chat_input("メッセージを入力してね...", on_submit=handle_user_inpu
 if "last_generated_image_url" in st.session_state and st.session_state.last_generated_image_url:
     generated_image_url_to_display = st.session_state.last_generated_image_url
 
-    # 背景画像を変更するCSSを動的に適用
     st.markdown(
         f"""
         <style>
@@ -314,13 +320,12 @@ if "last_generated_image_url" in st.session_state and st.session_state.last_gene
             transition: background-image 1s ease-in-out;
         }}
         .stApp {{
-            background-color: rgba(255, 255, 255, 0.7); /* コンテンツ部分の透過度を調整 */
-            border-radius: 10px; /* 角を少し丸める */
-            padding: 20px; /* 内側の余白 */
+            background-color: rgba(255, 255, 255, 0.7); 
+            border-radius: 10px; 
+            padding: 20px; 
         }}
-        /* チャットメッセージの背景も調整して読みやすくする */
         .stChatMessage {{
-            background-color: rgba(255, 255, 255, 0.85); /* メッセージボックスの背景を少し透明に */
+            background-color: rgba(255, 255, 255, 0.85); 
             border-radius: 8px;
             padding: 10px;
             margin-bottom: 10px;

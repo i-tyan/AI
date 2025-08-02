@@ -25,7 +25,7 @@ except Exception as e:
 
 # 画像生成も可能なマルチモーダルモデルを指定
 # モデル名は時期によって変わる可能性があるので、最新の公式ドキュメントで確認を推奨
-MULTI_MODAL_MODEL_NAME = 'gemini-2.0-flash-preview-image-generation' # エラーメッセージに合わせる
+MULTI_MODAL_MODEL_NAME = 'gemini-2.0-flash' # エラーメッセージに合わせる
 try:
     multi_modal_model = genai.GenerativeModel(
         model_name=MULTI_MODAL_MODEL_NAME,

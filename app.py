@@ -138,7 +138,7 @@ selected_preset_name = st.sidebar.radio(
 selected_preset_data = PERSONALITY_PRESETS[selected_preset_name]
 current_personality_prompt = selected_preset_data["prompt"]
 current_initial_response = selected_preset_data["initial_response_template"]
-current_question_prompt = selected_preset_data["question_prompt"]
+
 
 
 # セッションステートで会話履歴と現在の性格プロンプトを管理
@@ -282,23 +282,7 @@ def handle_user_input():
         # AIの返答（テキストと画像が含まれる可能性あり）を履歴に追加
         st.session_state.messages.append({"role": "model", "parts": ai_response_parts})
         
-        # --- AIが質問を生成する部分 ---
-        question_history_for_gemini_q = chat_history_for_gemini.copy() 
-        question_history_for_gemini_q.append({"role": "user", "parts": [{"text": current_question_prompt}]})
-
-        try:
-            question_session = text_model.start_chat(history=question_history_for_gemini_q[:-1])
-            with st.spinner("キャラクターが質問を考えてるよ..."):
-                question_response = question_session.send_message(current_question_prompt)
-                ai_question = question_response.text
-                print(f"AI Question: {ai_question}") # デバッグ用ログ
-
-            st.session_state.messages.append({"role": "model", "parts": [ai_question]})
-        except Exception as q_e:
-            st.warning(f"質問の生成中にエラーが出ちゃったの... {q_e}")
-            st.session_state.messages.append({"role": "model", "parts": ["ごめんね、質問が思いつかないんだ…"]})
-            print(f"Question generation error: {q_e}") # エラーログ
-
+       
         # --- 生成された画像をセッションステートに保存（背景用） ---
         st.session_state.last_generated_image_url = generated_image_url
 

@@ -1,7 +1,7 @@
 import streamlit as st
 import google.generativeai as genai
 import os
-from PIL import Image
+from PIL import Image # Pillowライブラリのインポートを追加
 from io import BytesIO
 import base64
 
@@ -15,7 +15,7 @@ except KeyError:
 genai.configure(api_key=api_key)
 
 # --- 2. Geminiモデルの初期化 ---
-# テキスト生成用のモデル (会話のテキスト応答と画像生成の判断に使用)
+# テキスト生成用のモデル
 TEXT_MODEL_NAME = 'gemini-2.5-flash' 
 try:
     text_model = genai.GenerativeModel(TEXT_MODEL_NAME)
@@ -24,11 +24,8 @@ except Exception as e:
     st.stop()
 
 # 画像生成も可能なマルチモーダルモデルを指定
-# このモデルはテキストプロンプトを与えると画像を生成して返すことを期待する。
-# エラーメッセージから 'gemini-2.0-flash-preview-image-generation' が画像対応と分かるが、
-# このモデルが generate_content に text のみを与えて image を返す挙動を本当にするかは要検証。
-# もしこれで動かない場合、Vertex AIのimagegenerationモデルへの切り替えも検討。
-MULTI_MODAL_MODEL_NAME = 'gemini-2.5-pro' # エラーメッセージに合わせる
+# モデル名は時期によって変わる可能性があるので、最新の公式ドキュメントで確認を推奨
+MULTI_MODAL_MODEL_NAME = 'gemini-2.0-flash-preview-image-generation' 
 try:
     multi_modal_model = genai.GenerativeModel(
         model_name=MULTI_MODAL_MODEL_NAME,
@@ -209,7 +206,6 @@ def handle_user_input():
                 print(f"AI Text Response: {ai_response_text}") # デバッグ用ログ
 
             # --- 2. 画像生成が必要かGeminiに判断させるプロンプトを生成 ---
-            # ここではテキストモデルを使用。画像生成は別途マルチモーダルモデルで行う。
             image_decision_prompt = f"""
             これまでの会話の文脈を考慮し、もし会話の内容が以下のような、具体的で視覚的な表現を必要とする描写（例: 風景、物体、キャラクター、抽象的な概念の具現化など）を含んでおり、画像を生成することで会話が豊かになると判断できる場合、その描写に最も適した英語の画像生成プロンプトを簡潔に生成してください。
             もし画像を生成する必要がないと判断した場合は、「NO_IMAGE」とだけ返してください。
@@ -232,48 +228,43 @@ def handle_user_input():
             画像生成プロンプト（またはNO_IMAGE）を教えてください:
             """
             
+            # テキストモデルを使って画像生成の判断プロンプトを生成
             image_decision_response = text_model.generate_content(image_decision_prompt)
             image_gen_prompt_for_gemini = image_decision_response.text.strip()
             print(f"Gemini's image decision: {image_gen_prompt_for_gemini}") # デバッグ用ログ
 
             # --- 3. 画像生成プロンプトが「NO_IMAGE」でなければ、マルチモーダルモデルで画像を生成 ---
             if image_gen_prompt_for_gemini and image_gen_prompt_for_gemini != "NO_IMAGE":
-                with st.spinner("画像を生成中だよ... "):
+                with st.spinner("画像を生成中だよ..."):
                     try:
-                        # ここが今回の修正の肝！
-                        # multi_modal_model には画像生成プロンプト（テキスト）だけを渡す
-                        # そして、応答の 'parts' に画像が含まれることを期待する
+                        # ★ここを修正！generation_configを削除する★
                         image_response = multi_modal_model.generate_content(
-                            # 画像生成プロンプトのみを渡す
-                            # モデルが自動的に画像とテキストの混合応答を生成することを期待
-                            # Vertex AIのimagegenerationモデルのように、明示的にresponse_mime_typeを指定しない
-                            # ただし、モデルが純粋なテキストプロンプトから画像を生成する能力を持つ必要がある
-                            f"Generate an image based on the following description: {image_gen_prompt_for_gemini}"
+                            [
+                                f"Generate an image based on the following description: {image_gen_prompt_for_gemini}",
+                                "" # テキストも必要な場合のために空のテキストパートを追加
+                            ]
+                            # generation_config=genai.types.GenerationConfig(  <-- この行と次の行を削除
+                            #     response_mime_type='image/jpeg' 
+                            # )
                         )
 
                         # レスポンスから画像データを抽出
+                        # ここは以前のコードのままでOK
                         for part in image_response.candidates[0].content.parts:
-                            if hasattr(part, 'image') and part.image: # `image`属性があるか確認
+                            if hasattr(part, 'image') and part.image: 
                                 buffered = BytesIO()
-                                part.image.save(buffered, format="JPEG") # 例としてJPEGに保存
+                                part.image.save(buffered, format="JPEG") 
                                 img_str = base64.b64encode(buffered.getvalue()).decode()
                                 
                                 generated_image_url = f"data:image/jpeg;base64,{img_str}"
                                 ai_response_parts.append({"mime_type": "image/jpeg", "data": img_str})
-                                print(f"Generated Base64 Image Data (first 50 chars): {img_str[:50]}...") # デバッグ用ログ
-                                # テキストパートも同時に返される場合があるため、テキストも抽出
-                                if hasattr(part, 'text'):
-                                    ai_response_parts.append(part.text)
-                                break # 最初の画像だけ取得
+                                print(f"Generated Base64 Image Data (first 50 chars): {img_str[:50]}...") 
+                                break 
                             elif part.mime_type and part.mime_type.startswith('image/'):
-                                # Base64データが直接来る場合（一部の古いAPIや特定の挙動）
                                 if hasattr(part, 'data'):
                                     generated_image_url = f"data:{part.mime_type};base64,{part.data}"
                                     ai_response_parts.append({"mime_type": part.mime_type, "data": part.data})
                                     print(f"Generated Raw Base64 Image Data (first 50 chars): {part.data[:50]}...")
-                                # テキストパートも同時に返される場合があるため、テキストも抽出
-                                if hasattr(part, 'text'):
-                                    ai_response_parts.append(part.text)
                                 break
                         
                         if not generated_image_url:
@@ -282,7 +273,7 @@ def handle_user_input():
                     except Exception as img_e:
                         st.warning(f"画像生成に失敗したもん... {img_e}")
                         generated_image_url = None
-                        print(f"Image generation error with multi_modal_model: {img_e}") # エラーログ
+                        print(f"Image generation error with multi_modal_model: {img_e}") 
 
             else:
                 print("Gemini decided not to generate an image (or returned NO_IMAGE).")
@@ -292,13 +283,12 @@ def handle_user_input():
             ai_response_parts = [f"ごめんなさい、お話の途中でエラーが出ちゃったの...: {e}"]
             st.error(ai_response_parts[0])
             generated_image_url = None
-            print(f"Overall AI response or image generation error: {e}") # エラーログ
+            print(f"Overall AI response or image generation error: {e}") 
 
         # AIの返答（テキストと画像が含まれる可能性あり）を履歴に追加
         st.session_state.messages.append({"role": "model", "parts": ai_response_parts})
         
        
-
         # --- 生成された画像をセッションステートに保存（背景用） ---
         st.session_state.last_generated_image_url = generated_image_url
 

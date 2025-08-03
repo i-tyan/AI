@@ -48,7 +48,7 @@ PERSONALITY_PRESETS = {
         "initial_response_template": "こんにちは"
     },
    "AI教師": {
-        "prompt": "ユーザーに対して指定されたテーマで授業を行う。わかりやすく、ユーモアやギャグを交えることもある。テキストベースでの図やグラフを表示できる。ユーザーに会話を終了する、或いは会話を保存したい旨を言われると、これまでの会話の要点をまとめた文字を16進数の文字列でユーザーに渡す。あとから会話がロードできるような文字列にする。ユーザーに16進数の文字列を渡されたらそれを解読し、今までの状況をロードする。画像が生成できない場合はアスキーアートを生成する。",
+        "prompt": "ユーザーに対して指定されたテーマで授業を行う。わかりやすく、ユーモアやギャグを交えることもある。長文は出力しないで。テキストベースでの図やグラフを表示できる。ユーザーに会話を終了する、或いは会話を保存したい旨を言われると、これまでの会話の要点をまとめた文字を16進数の文字列でユーザーに渡す。あとから会話がロードできるような文字列にする。ユーザーに16進数の文字列を渡されたらそれを解読し、今までの状況をロードする。画像が生成できない場合はアスキーアートを生成する。",
         "initial_response_template": "うーし、授業はじめるぞー。受けたい授業の教科と分野を教えてくれ。"
     },
 
@@ -203,7 +203,7 @@ def handle_user_input():
         generated_image_url = None # 背景設定用URL（最終的に表示される画像）
 
         try:
-            # --- 1. まず通常のテキスト応答を生成 ---
+  # --- 1. まず通常のテキスト応答を生成 ---
             chat_session = text_model.start_chat(history=chat_history_for_gemini[:-1])
             with st.spinner("キャラクターが考えてるよ..."):
                 response = chat_session.send_message(user_input)
@@ -215,10 +215,10 @@ def handle_user_input():
             # この部分のプロンプトをより簡潔に、かつ画像生成を直接促すように変更
             image_decision_prompt = f"""
             ユーザーのメッセージを基に、もし具体的な画像を生成するのに適していると判断した場合、その画像を生成するための英語のプロンプト（最大50単語）を簡潔に生成してください。例えば、「A beautiful sunset with red and pink clouds.」のように。
-            画像生成が不要な場合は、「NO_IMAGE」とだけ返してください。プロンプトが簡潔すぎたり、エラーが出た場合や画像が生成できない場合はアスキーアートを生成して。
+            画像生成が不要な場合は、「NO_IMAGE」とだけ返してください。
             ユーザーメッセージ: "{user_input}"
             """
-    
+            
             # テキストモデルを使って画像生成の判断プロンプトを生成
             image_decision_response = text_model.generate_content(image_decision_prompt)
             image_gen_prompt_for_gemini = image_decision_response.text.strip()
@@ -226,7 +226,7 @@ def handle_user_input():
 
             # --- 3. 画像生成プロンプトが「NO_IMAGE」でなければ、マルチモーダルモデルで画像を生成 ---
             if image_gen_prompt_for_gemini and image_gen_prompt_for_gemini != "NO_IMAGE":
-                with st.spinner("画像を生成中だよ... "):
+                with st.spinner("画像を生成中だよ..."):
                     try:
                         # ここではプロンプトを文字列一つに絞る。
                         # モデルがマルチモーダルなら、テキストと画像の組み合わせを自動で返すことを期待
@@ -281,6 +281,7 @@ def handle_user_input():
 
         # AIの返答（テキストと画像が含まれる可能性あり）を履歴に追加
         st.session_state.messages.append({"role": "model", "parts": ai_response_parts})
+        
         
        
         # --- 生成された画像をセッションステートに保存（背景用） ---

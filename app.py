@@ -160,7 +160,7 @@ for message in st.session_state.messages:
             with st.chat_message("user"):
                 # ユーザーメッセージは通常テキストのみ
                 st.write(message["parts"][0])
-elif message["role"] == "model":
+    elif message["role"] == "model":
         with st.chat_message("assistant"):
             for part in message["parts"]:
                 if isinstance(part, str):

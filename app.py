@@ -173,6 +173,7 @@ for message in st.session_state.messages:
                         st.image(part['data'], caption="AIが生成したイメージだよ！")
                     
 # --- ユーザー入力とAI応答処理を関数にまとめる ---
+# --- ユーザー入力とAI応答処理を関数にまとめる ---
 def handle_user_input():
     user_input = st.session_state.user_chat_input_key
 
@@ -226,41 +227,42 @@ def handle_user_input():
                         image_response = multi_modal_model.generate_content(
                             f"Generate an image based on the following description: {image_gen_prompt_for_gemini}"
                         )
-
                         # レスポンスから画像データとテキストデータを抽出
-                        for part in image_response.candidates.parts:
-                            if hasattr(part, 'image') and part.image:
-                                # PIL Image オブジェクトの処理 (変更なし)
-                                buffered = BytesIO()
-                                part.image.save(buffered, format="JPEG")
-                                img_str = base64.b64encode(buffered.getvalue()).decode()
-                                generated_image_url = f"data:image/jpeg;base64,{img_str}"
-                                ai_response_parts.append({"mime_type": "image/jpeg", "data": img_str})
-                                print(f"Generated PIL Image Data...")
-                                break
-                            elif part.mime_type and part.mime_type.startswith('image/'):
-                                # Base64 データの処理 (変更なし)
-                                if hasattr(part, 'data'):
-                                    img_str = base64.b64encode(part.data).decode()
-                                    generated_image_url = f"data:{part.mime_type};base64,{img_str}"
-                                    ai_response_parts.append({"mime_type": part.mime_type, "data": img_str})
-                                    print(f"Generated Raw Base64 Image Data...")
+                        # ★ここが修正された部分だよ★
+                        if image_response.candidates:
+                            for part in image_response.candidates[0].content.parts:
+                                if hasattr(part, 'image') and part.image:
+                                    # PIL Image オブジェクトの処理 (変更なし)
+                                    buffered = BytesIO()
+                                    part.image.save(buffered, format="JPEG")
+                                    img_str = base64.b64encode(buffered.getvalue()).decode()
+                                    generated_image_url = f"data:image/jpeg;base64,{img_str}"
+                                    ai_response_parts.append({"mime_type": "image/jpeg", "data": img_str})
+                                    print(f"Generated PIL Image Data...")
                                     break
-                            # ★ 新しい処理: part が単純なテキスト（URLの可能性）の場合 ★
-                            elif hasattr(part, 'text') and part.text.strip().startswith(('http://', 'https://')):
-                                image_url = part.text.strip()
-                                generated_image_url = image_url
-                                ai_response_parts.append({"mime_type": "image/url", "data": image_url})
-                                print(f"Generated Image URL: {image_url}")
-                                break
-                            # ★ 新しい処理: Blob オブジェクトの処理 ★
-                            elif isinstance(part, genai.types.Blob) and part.mime_type.startswith('image/'):
-                                if part.data:
-                                    img_str = base64.b64encode(part.data).decode()
-                                    generated_image_url = f"data:{part.mime_type};base64,{img_str}"
-                                    ai_response_parts.append({"mime_type": part.mime_type, "data": img_str})
-                                    print(f"Generated Blob Image Data...")
+                                elif part.mime_type and part.mime_type.startswith('image/'):
+                                    # Base64 データの処理 (変更なし)
+                                    if hasattr(part, 'data'):
+                                        img_str = base64.b64encode(part.data).decode()
+                                        generated_image_url = f"data:{part.mime_type};base64,{img_str}"
+                                        ai_response_parts.append({"mime_type": part.mime_type, "data": img_str})
+                                        print(f"Generated Raw Base64 Image Data...")
+                                        break
+                                # ★ 新しい処理: part が単純なテキスト（URLの可能性）の場合 ★
+                                elif hasattr(part, 'text') and part.text.strip().startswith(('http://', 'https://')):
+                                    image_url = part.text.strip()
+                                    generated_image_url = image_url
+                                    ai_response_parts.append({"mime_type": "image/url", "data": image_url})
+                                    print(f"Generated Image URL: {image_url}")
                                     break
+                                # ★ 新しい処理: Blob オブジェクトの処理 ★
+                                elif isinstance(part, genai.types.Blob) and part.mime_type.startswith('image/'):
+                                    if part.data:
+                                        img_str = base64.b64encode(part.data).decode()
+                                        generated_image_url = f"data:{part.mime_type};base64,{img_str}"
+                                        ai_response_parts.append({"mime_type": part.mime_type, "data": img_str})
+                                        print(f"Generated Blob Image Data...")
+                                        break
                         if not generated_image_url and not any(isinstance(p, str) for p in ai_response_parts):
                             # 画像もテキストも生成されなかった場合
                             ai_response_parts.append("ごめんなさい、うまく画像を生成できなかったみたい...テキスト応答もなかったよ。")

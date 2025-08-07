@@ -229,7 +229,7 @@ def handle_user_input():
                         )
 
                         # レスポンスから画像データとテキストデータを抽出
-for part in image_response.candidates.parts:
+                    for part in image_response.candidates.parts:
     if hasattr(part, 'image') and part.image:
         # PIL Image オブジェクトの処理 (変更なし)
         buffered = BytesIO()

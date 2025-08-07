@@ -229,7 +229,7 @@ def handle_user_input():
                         )
 
                         # レスポンスから画像データとテキストデータを抽出
-                        for part in image_response.candidates.parts:
+for part in image_response.candidates.parts:
     if hasattr(part, 'image') and part.image:
         # PIL Image オブジェクトの処理 (変更なし)
         buffered = BytesIO()
@@ -262,7 +262,6 @@ def handle_user_input():
             ai_response_parts.append({"mime_type": part.mime_type, "data": img_str})
             print(f"Generated Blob Image Data...")
             break
-                        
                         if not generated_image_url and not any(isinstance(p, str) for p in ai_response_parts):
                             # 画像もテキストも生成されなかった場合
                             ai_response_parts.append("ごめんなさい、うまく画像を生成できなかったみたい...テキスト応答もなかったよ。")

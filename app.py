@@ -230,14 +230,14 @@ def handle_user_input():
                         if image_response.candidates:
                             for part in image_response.candidates[0].content.parts:
                                 # ★ここから修正された部分だよ★
-                                if isinstance(part, genai.types.Blob):
-                                    if part.mime_type.startswith('image/'):
-                                        if part.data:
-                                            img_str = base64.b64encode(part.data).decode()
-                                            generated_image_url = f"data:{part.mime_type};base64,{img_str}"
-                                            ai_response_parts.append({"mime_type": part.mime_type, "data": img_str})
-                                            print(f"Generated Blob Image Data...")
-                                            break
+                                if hasattr(part, 'mime_type') and part.mime_type.startswith('image/'):
+                                    if hasattr(part, 'data') and part.data:
+                                        # Base64 データの処理
+                                        img_str = base64.b64encode(part.data).decode()
+                                        generated_image_url = f"data:{part.mime_type};base64,{img_str}"
+                                        ai_response_parts.append({"mime_type": part.mime_type, "data": img_str})
+                                        print(f"Generated Image Data...")
+                                        break
                                 elif hasattr(part, 'image') and part.image:
                                     # PIL Image オブジェクトの処理
                                     buffered = BytesIO()

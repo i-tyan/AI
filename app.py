@@ -103,8 +103,9 @@ PERSONALITY_PRESETS = {
 }
 
 # --- 4. Streamlit UIと会話ロジック ---
+st.image("Gemini_Generated_Image_qotgqqotgqqotgqq (1).png")
 
-# 画像表示と背景設定のコードを削除
+
 st.write("好きなキャラクターを選んで、話そう！キャラクターを変えると履歴がぱーになるので注意！会話を保存するときは、AIに会話を終了或いは保存する旨を伝えよう！")
 
 # サイドバーにAIの性格選択UIを配置

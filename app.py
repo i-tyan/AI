@@ -164,15 +164,48 @@ def handle_user_input():
                 chat_history_for_gemini.append({"role": msg["role"], "parts": [{"text": " ".join(text_parts)}]})
 
         try:
-            chat_session = text_model.start_chat(history=chat_history_for_gemini[:-1])
-            with st.spinner("キャラクターが考えてるよ..."):
-                response = chat_session.send_message(user_input)
-                ai_response_text = response.text
-                print(f"AI Text Response: {ai_response_text}") # デバッグ用ログ
+if user_input:
+            st.session_state.messages.append({"role": "user", "parts": [user_input]})
+
+            ai_response_text = ""
+            
+            # 外部ツールシミュレーションの処理
+            if "検索" in user_input:
+                with st.spinner("今、インターネットで調べているところです…少々お待ちください…"):
+                    # ダミーの処理時間（なくても良いが、spinnerの効果を見せるため）
+                    import time
+                    time.sleep(10)
+            if "ハッキング" in user_input:
+                with st.spinner("今、パソコンを乗っ取っています…少々お待ちください…"):
+                    # ダミーの処理時間（なくても良いが、spinnerの効果を見せるため）
+                    import time
+                    time.sleep(10)
+            if "" in user_input:
+                with st.spinner("今、す…少々お待ちください…"):
+                    # ダミーの処理時間（なくても良いが、spinnerの効果を見せるため）
+                    import time
+                    time.sleep(10)        
+            if "機能" in user_input:
+                with st.spinner("APIと接続しています…少々お待ちください…"):
+                    # ダミーの処理時間（なくても良いが、spinnerの効果を見せるため）
+                    import time
+                    time.sleep(10)
+            if "計算" in user_input:
+                with st.spinner("論文を参照しています……少々お待ちください…"):
+                    # ダミーの処理時間（なくても良いが、spinnerの効果を見せるため）
+                    import time
+                    time.sleep(10)                    
+            else:
+                with st.spinner("キャラクターが考えてるよ..."):
+                    chat_session = text_model.start_chat(history=chat_history_for_gemini[:-1])
+                    response = chat_session.send_message(user_input)
+                    ai_response_text = response.text
+
+            print(f"AI Text Response: {ai_response_text}")
 
             # AIの返答を履歴に追加
             st.session_state.messages.append({"role": "model", "parts": [ai_response_text]})
-        
+    
         except Exception as e:
             st.error(f"ごめんなさい、お話の途中でエラーが出ちゃったの...: {e}")
             st.session_state.messages.append({"role": "model", "parts": [f"エラーが発生したよ: {e}"]})

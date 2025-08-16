@@ -4,7 +4,7 @@ import os
 import base64
 from googleapiclient.discovery import build
 # 取得したYouTube Data APIキーを設定
-YOUTUBE_API_KEY = os.environ.get("YOUTUBE_API_KEY") # 環境変数から取得するのが安全
+YOUTUBE_API_KEY = os.environ.get("YOUTUBE_API_KEY") # 環境変数から取得するのが安全　
 
 # APIクライアントをビルド
 youtube = build('youtube', 'v3', developerKey=YOUTUBE_API_KEY)

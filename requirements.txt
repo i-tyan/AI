@@ -2,3 +2,5 @@ streamlit
 google-generativeai
 Pillow
 pip install google-api-python-client
+
+google-api-python-client

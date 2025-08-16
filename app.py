@@ -165,9 +165,9 @@ def handle_user_input():
 
         try:
             if user_input:
-            st.session_state.messages.append({"role": "user", "parts": [user_input]})
+             st.session_state.messages.append({"role": "user", "parts": [user_input]})
 
-            ai_response_text = ""
+             ai_response_text = ""
             
             # 外部ツールシミュレーションの処理
             if "検索" in user_input:

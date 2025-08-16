@@ -147,9 +147,26 @@ for message in st.session_state.messages:
 def handle_user_input():
     user_input = st.session_state.user_chat_input_key
 
+ def get_joke():
+    try:
+        response = requests.get("https://v2.jokeapi.dev/joke/Any?lang=ja&type=single")
+        response.raise_for_status() # HTTPエラーが発生した場合に例外を発生させる
+        joke_data = response.json()
+        if joke_data['error']:
+            return "ごめんなさい、ジョークが見つからなかったよ。"
+        return joke_data['joke']
+    except requests.exceptions.RequestException as e:
+        print(f"ジョークAPIへのリクエストエラー: {e}")
+        return "ジョークAPIに接続できなかったみたい。"
+
+# ... (既存のhandle_user_input関数) ...
+
+def handle_user_input():
+    user_input = st.session_state.user_chat_input_key
     if user_input:
         # ユーザーメッセージを履歴に追加
-      #  st.session_state.messages.append({"role": "user", "parts": [user_input]})
+#        st.session_state.messages.append({"role": "user", "parts": [user_input]})
+
         
         # Geminiに渡す履歴は、テキストのみにするか、対応する形式に合わせる
         chat_history_for_gemini = []
@@ -208,8 +225,19 @@ def handle_user_input():
 
             print(f"AI Text Response: {ai_response_text}")
 
-            # AIの返答を履歴に追加
-            st.session_state.messages.append({"role": "model", "parts": [ai_response_text]})
+
+        if "ジョーク" in user_input or "面白" in user_input or "戯言" in user_input or "冗談" in user_input or "談" in user_input or "話" in user_input or "暇" in user_input or "雑" in user_input:
+            ai_response_text = get_joke()
+        else:
+            # 通常のAI応答を生成
+            chat_session = text_model.start_chat(history=chat_history_for_gemini[:-1])
+            response = chat_session.send_message(user_input)
+            ai_response_text = response.text
+        
+        # AIの返答を履歴に追加
+        st.session_state.messages.append({"role": "model", "parts": [ai_response_text]})
+        
+  
     
         except Exception as e:
             st.error(f"ごめんなさい、お話の途中でエラーが出ちゃったの...: {e}")

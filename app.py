@@ -198,10 +198,7 @@ def handle_user_input():
                 with st.spinner("論文を参照しています……少々お待ちください…"):
                     import time
                     time.sleep(10)         
-  　　　    if "知" in user_input:
-                with st.spinner("APIで参照しています……少々お待ちください…"):
-                    import time
-                    time.sleep(10)   
+
                     
             else:
                 with st.spinner("キャラクターが考えてるよ..."):

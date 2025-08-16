@@ -2,7 +2,32 @@ import streamlit as st
 import google.generativeai as genai
 import os
 import base64
+from googleapiclient.discovery import build
+# 取得したYouTube Data APIキーを設定
+YOUTUBE_API_KEY = os.environ.get("YOUTUBE_API_KEY") # 環境変数から取得するのが安全
 
+# APIクライアントをビルド
+youtube = build('youtube', 'v3', developerKey=YOUTUBE_API_KEY)
+
+# 検索クエリを設定
+search_query = "Python tutorial"
+max_results = 5
+
+# APIリクエストを作成して実行
+search_response = youtube.search().list(
+    q=search_query,
+    part='snippet',
+    type='video',
+    maxResults=max_results
+).execute()
+
+# 検索結果から情報を抽出して表示
+for search_result in search_response.get('items', []):
+    title = search_result['snippet']['title']
+    channel_title = search_result['snippet']['channelTitle']
+    print(f"Title: {title}")
+    print(f"Channel: {channel_title}")
+    print("-" * 20)
 # --- 1. Google Gemini APIキーの設定 ---
 try:
     api_key = st.secrets["GOOGLE_API_KEY"]

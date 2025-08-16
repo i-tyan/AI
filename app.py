@@ -147,7 +147,7 @@ for message in st.session_state.messages:
 def handle_user_input():
     user_input = st.session_state.user_chat_input_key
 
- def get_joke():
+def get_joke():
     try:
         response = requests.get("https://v2.jokeapi.dev/joke/Any?lang=ja&type=single")
         response.raise_for_status() # HTTPエラーが発生した場合に例外を発生させる

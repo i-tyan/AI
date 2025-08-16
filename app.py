@@ -180,19 +180,18 @@ def handle_user_input():
                     # ダミーの処理時間（なくても良いが、spinnerの効果を見せるため）
                     import time
                     time.sleep(10)
-            if "" in user_input:
-                with st.spinner("今、す…少々お待ちください…"):
-                    # ダミーの処理時間（なくても良いが、spinnerの効果を見せるため）
+            if "はろー" in user_input:
+                with st.spinner("今、あいさつしています…少々お待ちください…"):
+
                     import time
                     time.sleep(10)        
             if "機能" in user_input:
                 with st.spinner("APIと接続しています…少々お待ちください…"):
-                    # ダミーの処理時間（なくても良いが、spinnerの効果を見せるため）
+
                     import time
                     time.sleep(10)
             if "計算" in user_input:
                 with st.spinner("論文を参照しています……少々お待ちください…"):
-                    # ダミーの処理時間（なくても良いが、spinnerの効果を見せるため）
                     import time
                     time.sleep(10)                    
             else:

@@ -164,7 +164,7 @@ def handle_user_input():
                 chat_history_for_gemini.append({"role": msg["role"], "parts": [{"text": " ".join(text_parts)}]})
 
         try:
-if user_input:
+            if user_input:
             st.session_state.messages.append({"role": "user", "parts": [user_input]})
 
             ai_response_text = ""

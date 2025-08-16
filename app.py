@@ -167,16 +167,16 @@ for message in st.session_state.messages:
             for part in message["parts"]:
                 if isinstance(part, str):
                     st.write(part)
-                    
 # --- ユーザー入力とAI応答処理を関数にまとめる ---
 def handle_user_input():
     user_input = st.session_state.user_chat_input_key
 
     if user_input:
-        # ユーザーメッセージを履歴に追加
-      #  st.session_state.messages.append({"role": "user", "parts": [user_input]})
+        # ✅ ユーザーメッセージを履歴に追加
+        st.session_state.messages.append({"role": "user", "parts": [user_input]})
         
-        # Geminiに渡す履歴は、テキストのみにするか、対応する形式に合わせる
+        # Geminiに渡す履歴を、テキストのみにするか、対応する形式に合わせる
+        # ✅ 最新のユーザー入力も含まれるようになる
         chat_history_for_gemini = []
         for msg in st.session_state.messages:
             text_parts = []
@@ -189,42 +189,41 @@ def handle_user_input():
                 chat_history_for_gemini.append({"role": msg["role"], "parts": [{"text": " ".join(text_parts)}]})
 
         try:
-            if user_input:
-             st.session_state.messages.append({"role": "user", "parts": [user_input]})
-
-             ai_response_text = ""
+            ai_response_text = ""
             
-            # 外部ツールシミュレーションの処理
+            # ✅ スピナーとAI応答ロジックを統合
             if "検索" in user_input:
                 with st.spinner("今、インターネットで調べているところです…少々お待ちください…"):
-                    # ダミーの処理時間（なくても良いが、spinnerの効果を見せるため）
-                    import time
-                    time.sleep(10)
-            if "ハッキング" in user_input:
-                with st.spinner("今、パソコンを乗っ取っています…少々お待ちください…"):
-                    # ダミーの処理時間（なくても良いが、spinnerの効果を見せるため）
-                    import time
-                    time.sleep(10)
-            if "はろー" in user_input:
-                with st.spinner("今、あいさつしています…少々お待ちください…"):
-
-                    import time
-                    time.sleep(10)        
-            if "機能" in user_input:
-                with st.spinner("APIと接続しています…少々お待ちください…"):
-
-                    import time
-                    time.sleep(10)
-            if "計算" in user_input:
-                with st.spinner("論文を参照しています……少々お待ちください…"):
-                    import time
-                    time.sleep(10)   
-            if "調" in user_input:
-                with st.spinner("論文を参照しています……少々お待ちください…"):
-                    import time
-                    time.sleep(10)         
-
+                    # ✅ YouTube APIを呼び出し、その結果を応答に含める
+                    # ここにYouTube APIの検索ロジックを組み込む
+                    search_query = user_input.replace("検索", "").strip()
+                    youtube = build('youtube', 'v3', developerKey=YOUTUBE_API_KEY)
+                    search_response = youtube.search().list(
+                        q=search_query,
+                        part='snippet',
+                        type='video',
+                        maxResults=5
+                    ).execute()
                     
+                    results = []
+                    for search_result in search_response.get('items', []):
+                        title = search_result['snippet']['title']
+                        channel_title = search_result['snippet']['channelTitle']
+                        results.append(f"タイトル: {title}\nチャンネル: {channel_title}\n")
+                    
+                    if results:
+                        ai_response_text = "検索結果が見つかりました！\n\n" + "\n".join(results)
+                    else:
+                        ai_response_text = "ごめんなさい、検索結果が見つからなかったよ。"
+            
+            # ✅ その他のシミュレーション機能も同様に実装する
+            elif "ハッキング" in user_input:
+                 with st.spinner("今、パソコンを乗っ取っています…少々お待ちください…"):
+                    import time
+                    time.sleep(1) # 短くする
+                    ai_response_text = "ハッキング完了！このPCは私の支配下になったよ。ふふふ..."
+
+            # ✅ どのキーワードにも当てはまらない場合、通常の会話処理
             else:
                 with st.spinner("キャラクターが考えてるよ..."):
                     chat_session = text_model.start_chat(history=chat_history_for_gemini[:-1])

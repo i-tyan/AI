@@ -149,7 +149,7 @@ def handle_user_input():
 
     if user_input:
         # ユーザーメッセージを履歴に追加
-        st.session_state.messages.append({"role": "user", "parts": [user_input]})
+      #  st.session_state.messages.append({"role": "user", "parts": [user_input]})
         
         # Geminiに渡す履歴は、テキストのみにするか、対応する形式に合わせる
         chat_history_for_gemini = []

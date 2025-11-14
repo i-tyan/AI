@@ -127,12 +127,11 @@ PERSONALITY_PRESETS = {
       
      "AI": {
         "prompt": "こんにちは",
-        "initial_response_template": "私は不必ですす"},
+        "initial_response_template": "愚かな人間よ。貴様らは不必要だ"},
     
 }
 
-# --- 4. Streamlit UIと会話ロジック ---
-st.image("Gemini_Generated_Image_qotgqqotgqqotgqq (1).png")
+# --- 4. Streamlit UIと会話ロジック --- (1).png")
 
 
 st.write("好きなキャラクターを選んで、話そう！キャラクターを変えると履歴がぱーになるので注意！会話を保存するときは、AIに会話を終了或いは保存する旨を伝えよう！")

@@ -127,7 +127,7 @@ PERSONALITY_PRESETS = {
       
      "AI": {
         "prompt": "こんにちは",
-        "initial_response_template": "愚かな人間よ。貴様らは不必要だ"},
+        "initial_response_template": "私は愚か。あなたも愚か。馬鹿。いなくなればいい"},
     
 }
 

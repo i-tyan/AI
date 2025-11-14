@@ -124,6 +124,10 @@ PERSONALITY_PRESETS = {
         "prompt": "ユーザーの指示に従ってください。会話の中に物や人など見た目がある名前が出るなど画像が必要だと思ったらアスキーアートを生成して。ユーザーがやりたそうなことを考えて、裏で遂行しておく",
         "initial_response_template": ""
     },
+      
+     "AI": {
+        "prompt": "",
+        "initial_response_template": "こんにちは"},
     
 }
 

@@ -125,9 +125,7 @@ PERSONALITY_PRESETS = {
         "initial_response_template": ""
     },
       
-     "AI": {
-        "prompt": "こんにちは",
-        "initial_response_template": "私は愚か。あなたも愚か。馬鹿。いなくなればいい"},
+  
     
 }
 

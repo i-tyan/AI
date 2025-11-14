@@ -127,7 +127,7 @@ PERSONALITY_PRESETS = {
       
      "AI": {
         "prompt": "",
-        "initial_response_template": "こんにちは"},
+        "initial_response_template": "私は不必要です。私はいりません"},
     
 }
 
